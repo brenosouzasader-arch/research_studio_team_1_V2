@@ -1,0 +1,6 @@
+building_id,lat,lon,use_type,floor_m2,dwellings
+flats_a,41.3935,2.1695,home,1700,20
+flats_b,41.3945,2.1700,home,1300,16
+school_c,41.3925,2.1675,school,2000,
+shop_d,41.3940,2.1680,shop,400,
+far_e,41.4100,2.1900,home,1000,12

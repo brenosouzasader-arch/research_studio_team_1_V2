@@ -1,0 +1,15 @@
+{
+  "name": "Poblenou / 22@ around the Quatre Cantons school",
+  "why": "A real energy community (CEP9) already shares this school roof's output with 30 homes and 4 public buildings, so we can check our numbers against real ones. 22@ offices nearby are weekend-closed hosts.",
+  "center": {"lat": 41.4015, "lon": 2.1975, "note": "APPROXIMATE centre of the zone; check on a map"},
+  "postal_codes": ["08005", "08018"],
+  "max_distance_m": 500,
+  "hosts": [
+    {"name": "Institut Quatre Cantons (school roof, CEP9)", "address": "CHECK: exact address of Institut Quatre Cantons, Barcelona", "kind": "school",
+     "real_numbers": {"kwp": 58.32, "panels": 108, "yearly_kwh": 73750, "households": 30,
+                      "source": "https://elpoblenou.cat/wp-content/uploads/2024/10/presentacio-CEP9_v2.pptx.pdf"}},
+    {"name": "MediaTIC", "address": "Carrer de Roc Boronat 117, Barcelona", "kind": "office"}
+  ],
+  "lidar_sheets": "CHECK: ICGC LiDAR sheets covering this zone (we only have Eixample sheets 430582 and 430583)",
+  "status": "candidate"
+}

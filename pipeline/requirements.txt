@@ -1,0 +1,9 @@
+# All steps (no AI library needed yet)
+requests
+shapely>=2.0
+pyproj
+laspy[lazrs]
+numpy
+scipy
+pillow
+pytest

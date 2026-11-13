@@ -1,0 +1,22 @@
+# Python
+.venv/
+__pycache__/
+.pytest_cache/
+*.pyc
+
+# Downloads and results (each person keeps their own copy)
+pipeline/data/*
+!pipeline/data/roof_exclusions.csv
+*.laz
+*.las
+
+# Outputs written while running from pipeline/ (share good ones in pipeline/examples/)
+pipeline/*.json
+pipeline/*.geojson
+pipeline/*.png
+pipeline/*.csv
+
+# Editors and systems
+.vscode/
+.DS_Store
+Thumbs.db

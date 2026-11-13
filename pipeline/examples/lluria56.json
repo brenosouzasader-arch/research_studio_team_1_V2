@@ -1,0 +1,106 @@
+{
+  "building": {
+    "refcat": "0629625DF3802H",
+    "address": "CL ROGER DE LLURIA 56 BARCELONA (BARCELONA)",
+    "query": "Carrer de Roger de Ll\u00faria 56, Barcelona",
+    "year_built": 1900,
+    "dwellings": 10
+  },
+  "roof": {
+    "method": "lidar only",
+    "usable_area_m2": 201.2,
+    "free_area_m2": 335.0,
+    "obstacle_area_m2": 153.2,
+    "existing_panels_m2": null,
+    "confidence": "medium"
+  },
+  "lidar": {
+    "roof_area_m2": 503.5,
+    "lidar_coverage": 0.97,
+    "surfaces": [
+      {
+        "height_m": 47.73,
+        "area_m2": 228.5
+      },
+      {
+        "height_m": 30.19,
+        "area_m2": 50.5
+      },
+      {
+        "height_m": 30.33,
+        "area_m2": 34.5
+      },
+      {
+        "height_m": 49.89,
+        "area_m2": 21.5
+      }
+    ],
+    "obstacles": [
+      {
+        "area_m2": 66.5,
+        "height_m": 20.99,
+        "x": 430559.41,
+        "y": 4582747.08
+      },
+      {
+        "area_m2": 45.0,
+        "height_m": 5.35,
+        "x": 430544.41,
+        "y": 4582731.5
+      },
+      {
+        "area_m2": 25.5,
+        "height_m": 3.24,
+        "x": 430542.76,
+        "y": 4582724.2
+      },
+      {
+        "area_m2": 8.5,
+        "height_m": 1.39,
+        "x": 430545.68,
+        "y": 4582739.72
+      },
+      {
+        "area_m2": 2.75,
+        "height_m": 2.41,
+        "x": 430568.02,
+        "y": 4582746.66
+      },
+      {
+        "area_m2": 1.75,
+        "height_m": 2.35,
+        "x": 430555.39,
+        "y": 4582741.96
+      },
+      {
+        "area_m2": 0.75,
+        "height_m": 5.68,
+        "x": 430548.92,
+        "y": 4582744.75
+      },
+      {
+        "area_m2": 0.5,
+        "height_m": 1.84,
+        "x": 430554.75,
+        "y": 4582736.0
+      },
+      {
+        "area_m2": 0.5,
+        "height_m": 1.22,
+        "x": 430552.5,
+        "y": 4582731.5
+      },
+      {
+        "area_m2": 0.5,
+        "height_m": 5.26,
+        "x": 430537.0,
+        "y": 4582730.5
+      }
+    ],
+    "obstacle_area_m2": 153.2,
+    "noise_area_m2": 1.0,
+    "free_area_m2": 335.0,
+    "usable_area_m2": 201.2
+  },
+  "photo_error": null
+}
