@@ -1,4 +1,4 @@
-# Step 09: Compare investment
+# Step 08: Compare investment
 
 **Question this step answers:** after paying for the panels (and the battery), what does the owner earn each year, and how long until it pays back?
 
@@ -7,13 +7,13 @@
 Our business model (team decision, 12 Nov 2026): **the owner pays for and keeps the panels and the battery, uses what it can, and sells the rest to the guests** below the grid price.
 
 ```
-python -m step09_compare_investment.investment --sharing-dir data\sharing\cep9 --kwp 53.34 --out data\investment\cep9
-python -m step09_compare_investment.investment --allocation-dir data\allocation\cep9 --kwp 53.34 --out data\investment\cep9
+python -m step08_compare_investment.investment --sharing-dir data\sharing\cep9 --kwp 53.34 --out data\investment\cep9
+python -m step08_compare_investment.investment --allocation-dir data\allocation\cep9 --kwp 53.34 --out data\investment\cep9
 ```
 
 `--kwp` is the installed power from step 03 (`<name>_yield.json`). You can give both folders at once.
 
-## With `--sharing-dir` (step 08's battery agent, real prices): `investment_battery.json`
+## With `--sharing-dir` (step 07's battery agent, real prices): `investment_battery.json`
 
 For each price year (typical, 2023, 2024, 2025), with and without the battery, and with a central, low and high panel cost:
 
@@ -23,11 +23,11 @@ For each price year (typical, 2023, 2024, 2025), with and without the battery, a
 - a flag if the battery wears out before the investment pays back
 - what the guests save, and the guest discount used
 
-Panel cost and upkeep are **ASSUMPTIONS** (checked 15 Nov 2026, see below) (`CASES` at the top of `investment.py`: €1,200 / 1,400 / 1,600 per kWp and €15 per kWp a year). The battery's cost comes from `step06_prices_and_battery/battery_types.py`.
+Panel cost has a source (Marblanc Solar, chosen by Breno on 15 Nov 2026), upkeep is an **ASSUMPTION** (`CASES` at the top of `investment.py`: central €1,061 per kWp, best case €730, worst case €1,400, and €15 per kWp a year). The battery's cost comes from `step06_prices_and_battery/battery_types.py`.
 
-## With `--allocation-dir` (step 08's sharing-law scenarios): `investment_summary.json`
+## With `--allocation-dir` (step 07's sharing-law scenarios): `investment_summary.json`
 
-The host-only, fixed and hourly scenarios at flat assumed prices (grid €0.16, sale €0.10, export €0.05 per kWh, with low and high cases). This was kept so the Spanish legal options can still be compared.
+The host-only, fixed and hourly scenarios at flat assumed prices (grid €0.16, sale €0.10, export €0.06 per kWh, with low and high cases). This was kept so the Spanish legal options can still be compared.
 
 ## Too many panels? Go back to step 03
 
@@ -45,7 +45,8 @@ Guests pay (1 − discount) × the grid price of each hour. The default discount
 
 | Number | Value | Source / status |
 |---|---|---|
-| Panel cost per kWp | €1,200 / 1,400 / 1,600 (central 1,400) | **ASSUMPTION, probably too high for a big roof.** The only Spanish figure found is about €730 per kWp for a typical 180 kW industrial installation, without VAT (€131,400) [APPA 2024, p. 13]. US commercial PV is about US$1,780 per kWp [NREL ATB 2024 commercial PV]. Smaller roofs cost more per kWp. Not changed yet: it moves the payback a lot (see open questions) |
+| Panel cost per kWp | central €1,061; best case €730; worst case €1,400 | Central: average of 10 Marblanc Solar quotes, June to August 2025, homes under 20 kW, no battery, with its own installation, inverter and legalisation (€1,061 per kW) [marblancsolar.com/itemised-costs-solar-panels-in-spain, page updated 11 Nov 2026]. It is an installer's blog, and for a big roof it probably overstates the price. Best case: about €730 per kWp for a typical 180 kW industrial installation, without VAT (€131,400) [APPA 2024, p. 13]. Worst case €1,400 is an **ASSUMPTION** (our old default, no source) |
+| Export price | €0.06 per kWh central | Endesa Solar Plus surplus price, excluding taxes: 0,06 €/kWh [endesa.com Solar Plus & Batería Virtual, 'last price and terms update 15 Oct 2026']. A retailer's offer for homes up to 15 kW, used as a stand-in |
 | Upkeep | €15 per kWp a year | **ASSUMPTION**, close to NREL's about US$19 per kWp a year [NREL ATB 2024 commercial PV]; no Spanish figure |
 | Battery cost, life, efficiency | see step 06 | LFP price is an ASSUMPTION; the rest from NREL ATB 2024 and PNNL 2022 |
 | Prices (PVPC, wholesale) | hourly 2023-2025 | **Measured**, REE REData |

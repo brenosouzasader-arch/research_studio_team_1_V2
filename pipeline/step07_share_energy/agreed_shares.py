@@ -1,6 +1,6 @@
-"""Step 08, second way of sharing: fixed shares agreed in advance, as real communities do.
+"""Step 07, second way of sharing: fixed shares agreed in advance, as real communities do.
 
-    python -m step08_share_energy.agreed_shares --host-dir data\\host\\cep9 ^
+    python -m step07_share_energy.agreed_shares --host-dir data\\host\\cep9 ^
         --neighbours-dir data\\neighbours\\cep9 --shares host=0.30,homes_30=0.232 ^
         --guest-price 0 --out data\\agreed\\cep9
 
@@ -28,7 +28,7 @@ import numpy as np
 
 from step04_read_host_demand.host_table import read_host_table
 from step06_prices_and_battery.prices import read_solar_year_prices
-from step07_discover_neighbours.candidates import read_demand
+from step07_share_energy.candidates import read_demand
 
 from .allocation import account, check
 
@@ -76,7 +76,7 @@ def run(gen, ids, demands, shares, pvpc, guest_price=0.0, dwellings=None):
 
 
 def main():
-    ap = argparse.ArgumentParser(description="Step 08: fixed agreed shares (as in CEP9)")
+    ap = argparse.ArgumentParser(description="Step 07: fixed agreed shares (as in CEP9)")
     ap.add_argument("--host-dir", required=True)
     ap.add_argument("--neighbours-dir", required=True)
     ap.add_argument("--prices-dir", default="data/prices")

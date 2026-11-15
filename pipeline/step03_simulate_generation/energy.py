@@ -42,7 +42,7 @@ def yield_for_layout(layout, horizon, weather, lat, lon, max_shade_loss=None, ma
     """Returns per-panel yearly kWh, per-panel shade loss (0-1), the roof's hourly kWh and
     which panels are kept. Panels losing more than max_shade_loss of their sun are left
     out of the hourly total (None keeps them all). max_panels keeps only that many of the
-    remaining panels, the best-producing first (to try a smaller system in step 09).
+    remaining panels, the best-producing first (to try a smaller system in step 08).
     per_panel=True also returns the (n_panels, n_hours) kWh array, for the layout options."""
     elev, az = sun_position(weather.times, lat, lon)
     n = horizon.shape[0]

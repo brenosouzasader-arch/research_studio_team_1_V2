@@ -1,0 +1,52 @@
+"""The demand-model trainer, on made-up meters in the GoiEner layout (the real files were not available offline)."""
+import numpy as np
+import pandas as pd
+import pytest
+
+from step05_forecast_demand import train_profile_model as tp
+
+
+def test_cnae_groups():
+    assert tp.cnae_group("9820") == "household" and tp.cnae_group("85.10") == "education"
+    assert tp.cnae_group(8411) == "public_admin" and tp.cnae_group("") == "other" and tp.cnae_group(None) == "other"
+
+
+@pytest.fixture
+def meters(tmp_path):
+    rng = np.random.default_rng(1)
+    hours = pd.date_range("2021-01-01", "2021-12-31 23:00", freq="h", tz="UTC")
+    local = hours.tz_convert(tp.TZ)
+    rows = []
+    for i in range(30):
+        office = i % 2 == 0
+        kw = rng.uniform(3, 10)
+        if office:   # busy 8-18 on weekdays, small at night
+            load = np.where((local.hour >= 8) & (local.hour < 18) & (local.dayofweek < 5), 1.0, 0.15)
+        else:        # evening peak, every day
+            load = np.where((local.hour >= 19) & (local.hour < 23), 1.0, 0.3)
+        kwh = kw * 0.1 * load * (1 + 0.05 * rng.standard_normal(len(hours)))
+        pd.DataFrame({"timestamp": hours.strftime("%Y-%m-%d %H:%M:%S+00:00"), "kWh": kwh}).to_csv(tmp_path / f"u{i}.csv", index=False)
+        rows.append({"user": f"u{i}", "cnae": "6201" if office else "9820", "p1": kw})
+    pd.DataFrame(rows).to_csv(tmp_path / "metadata.csv", index=False)
+    return tmp_path
+
+
+def test_tables_and_model(meters, tmp_path):
+    out = tmp_path / "out"
+    rep = tp.run(meters / "metadata.csv", meters, out)
+    assert set(rep["supply_points_per_type"]) == {"office", "household"}
+    assert rep["model_beats_baseline"] or rep["model_mae_kwh_day"] < 1.5 * rep["baseline_mae_kwh_day"]
+    shape = pd.read_csv(out / "hourly_shape.csv")
+    sums = shape.groupby(["btype", "season", "weekend"]).share.sum()
+    assert np.allclose(sums, 1.0, atol=1e-3)
+    mid = shape[(shape.btype == "office") & (shape.weekend == 0) & (shape.season == "summer")].set_index("hour").share
+    assert mid.loc[12] > 3 * mid.loc[3]          # offices: busy at noon, quiet at 3 am
+    d = pd.read_csv(out / "daily_averages.csv")
+    off = d[(d.btype == "office") & (d.month == 6)].set_index("weekend").kwh_day_mean
+    assert off.loc[0] > off.loc[1]               # offices use more on weekdays
+
+
+def test_missing_column_message(tmp_path):
+    pd.DataFrame({"a": [1]}).to_csv(tmp_path / "metadata.csv", index=False)
+    with pytest.raises(SystemExit, match="No 'id' column"):
+        tp.collect(tmp_path / "metadata.csv", tmp_path)

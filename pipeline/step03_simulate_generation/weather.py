@@ -8,13 +8,13 @@ differences between roofs come from shade (step 4's horizon), not from here.
 
 EPW files (EnergyPlus weather, found with Ladybug EPW Map, hosted by
 climate.onebuilding.org) work too. Give the .epw, or the .zip it came in, as
---weather to step4.shade_yield or step4.batch:
+--weather to step03_simulate_generation.shade_yield:
 
-    python -m step03_simulate_generation.batch roofs.csv --laz-dir data\\lidar ^
+    python -m step03_simulate_generation.shade_yield "..." --laz-dir data\\lidar ^
         --weather data\\weather\\ESP_CT_Barcelona.081800_TMYx.epw --out data\\yield_epw
 
 PVGIS stays the default, so runs without --weather give the same numbers as before.
-To see how the two typical years differ before running a batch:
+To see how the two typical years differ before a long run:
 
     python -m step03_simulate_generation.weather --compare data\\weather\\ESP_CT_Barcelona.081800_TMYx.epw
 

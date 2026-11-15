@@ -127,8 +127,9 @@ def test_screen_and_money():
     s = screen(gen, demand[0])
     assert s["surplus_kwh"] == 24 and s["max_shiftable_kwh"] == 16      # 8 h x 3 kWh surplus; 4 + 12 kWh bought
     m = money({**bt.get("lfp"), "kwh": 10.0}, gain_eur=300.0, cycles=100)
-    assert m["capex_eur"] == 5000 and m["life_years"] == 15
-    assert m["net_per_year_eur"] == round(300 - 5000 / 15 - 125)
+    capex = 10 * bt.LFP_CAPEX_EUR_PER_KWH
+    assert m["capex_eur"] == round(capex) and m["life_years"] == 15
+    assert m["net_per_year_eur"] == round(300 - capex / 15 - capex * 0.025)
     assert m["break_even_eur_per_kwh"] == round(300 / (10 * (1 / 15 + 0.025)))
 
 

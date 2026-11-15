@@ -1,6 +1,6 @@
 """The battery controller: decides, hour by hour, where every kWh of solar goes.
 
-Used by step 06 (host alone, to size the battery) and step 08 (host + guests).
+Used by step 06 (host alone, to size the battery) and step 07 (host + guests).
 
 THE SET-UP (team decision, 15 Nov 2026):
 - The battery sits at the host and belongs to the roof owner.

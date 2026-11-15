@@ -37,7 +37,7 @@ These come from `python -m step06_prices_and_battery.prices` and `price_model`, 
 | **[NREL ATB 2024]** [NREL Annual Technology Baseline 2024: commercial battery storage](https://atb.nrel.gov/electricity/2024/commercial_battery_storage) | Lithium-ion (LFP and NMC), "with LFP becoming the primary chemistry for stationary storage starting in 2021". "85% as a representative round-trip efficiency". "15-year lifetime". About one cycle a day. Fixed O&M "2.5% of the capital costs". Systems of 100-2,000 kW, 1-8 hours. Gives pack prices only (e.g. 4-hour $199/kWh, 2022 USD), not a full installed price we could use. |
 | **[PNNL 2022]** Viswanathan et al., [2022 Grid Energy Storage Technology Cost and Performance Assessment](https://www.energy.gov/cmei/2022-grid-energy-storage-technology-cost-and-performance-assessment) (PNNL-33283; [PDF](https://www.sandia.gov/app/uploads/sites/256/2024/02/ESGC-Cost-Performance-Report-2022-PNNL-33283.pdf)) | "the cycle life at 80% DOD for LFP and NMC is 2,400 and 1,520 cycles, respectively"; calendar lives "of 16 years for LFP and 13 years for NMC". Installed cost at 100 MW: 4 hours LFP $385/kWh, NMC $435/kWh; 10 hours LFP $356/kWh, vanadium flow $385/kWh. We use only the **ratios** between types, because these are utility-size plants. |
 
-No source was found for an installed price of a 20-500 kWh building battery in Europe (Fraunhofer ISE's cost study was checked but could not be read). That price stays an ASSUMPTION until we get an installer quote.
+Battery price (chosen by Breno, 15 Nov 2026): the only price we could read is one shop listing, [Lithium Battery Deye SE-G5.1 Pro-B on tienda-solar.es](https://tienda-solar.es/en/inicio/2025-bateria-de-litio-deye-se-g51-pro-b-512kwh): €999.00 "Tax included", 5.12 kWh nominal, 4.6 kWh usable, so €195 per nominal kWh. It backs the LFP price in `battery_types.py`. It is a home unit without installation or inverter, so for a 20-500 kWh building it stays an ASSUMPTION until we get an installer quote. The shop's category page lists no products to our fetch tool, so no average over several products was possible. [Endesa Solar Plus & Batería Virtual](https://www.endesa.com/en/catalog/solar-catalogue/endesa-solar-plus-bateria-virtual) ("last price and terms update: October 15, 2026") sells a *virtual* battery at €2 a month. It is a euro balance of surplus, not kWh of storage, so it gives no €/kWh price; we use its surplus price (0,06 €/kWh excluding taxes) as the export price. The page contradicts itself on whether the €2 includes taxes.
 
 ## Surplus: do schools and offices use all their solar?
 
@@ -77,7 +77,7 @@ No source was found for an installed price of a 20-500 kWh building battery in E
 | [Building Data Genome 2](https://github.com/buds-lab/building-data-genome-project-2) | 1,636 non-residential buildings with 2 years of hourly data. Planned training data for step 05; its accuracy on Barcelona must not be claimed. |
 | [Aretian: Barcelona Metropolitan Digital Twin](https://www.aretian.com/post/aretian-unveils-the-barcelona-metropolitan-digital-twin) | Checked and **not used**: a commercial urban-analytics platform (housing, economy, mobility) with no building energy, solar or schedule data. |
 
-## Law (kept for `--legal-mode` in step 07 and `allocation.py` in step 08; the default tool assumes direct wiring)
+## Law (kept for `--legal-mode` in step 07 and `allocation.py` in step 07; the default tool assumes direct wiring)
 
 | Source | What it backs up |
 |---|---|
@@ -90,22 +90,31 @@ No source was found for an installed price of a 20-500 kWh building battery in E
 | Panel models: 420 W at 1.76 x 1.13 m (default) and 540 W at 2.28 x 1.13 m | typical catalogue panels; 540 W chosen because CEP9 = 58.32 kWp / 108 panels = 540 W each [CEP9 presentation] | `step02_pv_capacity/layout.py` (`MODULES`) |
 | Layout options "neat blocks" and "best blocks" | rectangles of at least 12 m² / 16 m² of panels (6 / 8 panels of 420 W, 5 / 6 of 540 W), at least 2 panels wide both ways, panels at least 85% / 93% of the roof's 90th-percentile panel; chosen to look like real rooftop systems | `step03_simulate_generation/options.py` (`OPTIONS`) |
 | Where the real CEP9 panels are | 4 blocks, 187 m² in all, traced by eye from the ICGC orthophoto (`ortofoto_color_vigent`, CC BY 4.0) on 15 Nov 2026: light rows on the central roofs read as panels. Not checked against an installer plan, and 187 m² is less than 108 x 2.28 x 1.13 m = 278 m² of panel, so some panels may be missing or the photo may be older than the system | `pipeline/examples/cep9_actual.json` |
-| CEP9 monthly output | the reported 73,750 kWh/yr [CEP9 presentation] split over months with our step 03 shape (no monthly figures published) | `step10_publish_report/export_site_data.py` (`actual_variant`) |
-| CEP9 shares in our model | school 30% [The Guardian], 30 homes x 550 kWh (middle of 400-700 [CEP9]) = 23%, the other three members split the rest equally | `website/README.md` (step 08 `agreed_shares.py --shares`) |
+| CEP9 monthly output | the reported 73,750 kWh/yr [CEP9 presentation] split over months with our step 03 shape (no monthly figures published) | `step09_publish_report/export_site_data.py` (`actual_variant`) |
+| CEP9 shares in our model | school 30% [The Guardian], 30 homes x 550 kWh (middle of 400-700 [CEP9]) = 23%, the other three members split the rest equally | `website/README.md` (step 07 `agreed_shares.py --shares`) |
 | System losses 14% | the value in PVGIS's own example request; **PVGIS has no default**, `loss` is a required input and its documentation gives no value [PVGIS API page, read 15 Nov 2026]. Sindhuja's repo also uses 14%. The usual range is 10-20% | `step03_simulate_generation/energy.py` (`SYSTEM_LOSSES`) |
 | Power change with heat -0.35% per °C above 25 °C, panel at 420 W / 540 W | typical crystalline-silicon datasheet value; not read from a specific datasheet yet | `energy.py` (`TEMP_COEFF`) |
 | Panel rows: 10° tilt, rows spaced for no shade at 25° sun height (21 Dec noon), 1.76 x 1.13 m panel | catalogue and rule-of-thumb values | `step02_pv_capacity/layout.py` |
 | Orientation score: loss = 0.5 x sin(tilt) x (1 - cos(angle off south)) | a rough ranking formula for `--orient search`; the real yield comes from step 03 | `layout.py` (`yield_factor`) |
-| Group search: at most 6 guests, each must add 250 kWh a year | from the matchmaker diagram's stopping rule; ASSUMPTION | `step08_share_energy/optimise.py` |
-| Electricity taxes on a kWh | electricity tax 5.11% then VAT 21% (rates have changed over time) | `step08_share_energy/agreed_shares.py` (`TAX_FACTOR`) |
-| LFP installed price | €500 per kWh | `step06_prices_and_battery/battery_types.py` (`LFP_CAPEX_EUR_PER_KWH`) |
+| Group search: at most 6 guests, each must add 250 kWh a year | from the matchmaker diagram's stopping rule; ASSUMPTION | `step07_share_energy/optimise.py` |
+| Electricity taxes on a kWh | electricity tax 5.11% then VAT 21% (rates have changed over time) | `step07_share_energy/agreed_shares.py` (`TAX_FACTOR`) |
+| LFP installed price | €195 per kWh (one shop price, see above) | `step06_prices_and_battery/battery_types.py` (`LFP_CAPEX_EUR_PER_KWH`) |
 | Battery power | half its size per hour (a 2-hour battery) | `battery_types.py` (`c_rate`) |
 | Export paid at the wholesale (OMIE) price | | `step06_prices_and_battery/prices.py` |
 | PVPC used for big buildings too (they really pay 3.0TD) | | `prices.py` |
-| Guest price = PVPC minus 10% | team choice, slider on the report page | `step08_share_energy/battery_agent.py` (`GUEST_DISCOUNT`) |
-| Neighbours within 100 m, wired directly | team choice | `step07_discover_neighbours/candidates.py` |
+| Guest price = PVPC minus 10% | team choice, slider on the report page | `step07_share_energy/battery_agent.py` (`GUEST_DISCOUNT`) |
+| Neighbours within 100 m, wired directly | team choice | `step07_share_energy/candidates.py` |
 | Share of flats that join | 40% | `candidates.py` (`JOIN_RATE`) |
-| Panel cost €1,200 / 1,400 / 1,600 per kWp (central 1,400) | **Probably too high for a big roof**: the only Spanish figure we found is about €730 per kWp for a 180 kW industrial installation, without VAT [APPA 2024]; US commercial PV is about US$1,780 per kWp [NREL ATB 2024 PV]. Not changed yet: waiting for the team to choose (see the open questions) | `step09_compare_investment/investment.py` (`CASES`) |
+| Panel cost €1,061 per kWp central (best €730, worst €1,400) | Central: [Marblanc Solar](https://marblancsolar.com/itemised-costs-solar-panels-in-spain/), average of 10 quotes June to August 2025 for homes under 20 kW without battery (€1,061 per kW; panels about €0.15 per W, 16% of the total), page updated 11 Nov 2026. An installer's blog, so probably high for a big roof. Best: about €730 per kWp for 180 kW industrial without VAT [APPA 2024]. Worst: €1,400 is an ASSUMPTION | `investment.py` (`CASES`) |
 | Upkeep €15 per kWp a year | close to NREL's "about $19/kWDC-yr for 2023" for US commercial PV [NREL ATB 2024 PV]; no Spanish figure found | `investment.py` (`OM_EUR_PER_KWP_YEAR`) |
-| Flat prices for the legal-share comparison (grid 0.16, sale 0.10, export 0.05 €/kWh) | | `investment.py` (`CASES`) |
+| Flat prices for the legal-share comparison (grid 0.16, sale 0.10 ASSUMPTIONS; export 0.06 €/kWh = Endesa Solar Plus surplus price excl. taxes, see above) | | `investment.py` (`CASES`) |
 | Office 120 kWh/m²/yr, school 60 kWh/m²/yr and their day shapes | to replace with trained or metered data | `step05_forecast_demand/baseline_profiles.py` |
+
+## Demand datasets (looked at 15 Nov 2026 for `step05_forecast_demand/train_profile_model.py`)
+
+| Source | What it backs up |
+|---|---|
+| [GoiEner smart meter data, Zenodo](https://zenodo.org/records/7362094) and [Scientific Data paper](https://www.nature.com/articles/s41597-023-02846-0) | 25,559 Spanish supply points, hourly kWh Nov 2014 to Jun 2022, CNAE code and contracted power in metadata.csv, 72.5% Basque Country; licence CC BY 4.0 per the paper (the Zenodo text says CC BY-SA). Training data for the demand model. Column names not yet checked on the files |
+| [Open Data BCN: electricity by postal code, economic sector and time slot](https://opendata-ajuntament.barcelona.cat/data/dataset/consum-electricitat-bcn) | Datadis-based Barcelona consumption (MWh) per day, postal code, sector and time slot, CC BY 4.0. Real Barcelona day shapes by sector |
+| [Madrid open data: municipal building energy, monthly](https://datos.madrid.es/dataset/?tags=kwh) and [its structure PDF (May 2024)](https://datos.madrid.es/FWProjects/egob/Catalogo/Energia/ficheros/Estructura_DS_Consumo_energ%C3%ADa_edificios_municipales.pdf) | Monthly kWh per municipal building and sensor since 2020, with building type and coordinates. Not hourly |
+| [Building Data Genome 2, Zenodo](https://zenodo.org/records/3887306) | 1,636 non-residential buildings, 2 years hourly, 19 sites in North America and Europe, CC BY 4.0. No Spanish site confirmed |

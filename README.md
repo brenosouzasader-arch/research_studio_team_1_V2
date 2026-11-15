@@ -23,10 +23,9 @@ research_studio_team_1_V2/
 │   ├── step04_read_host_demand/      meter data or proxy → 8,760-hour host table, surplus (new)
 │   ├── step05_forecast_demand/       baseline profiles + Open Data BCN; AI model next     (from V1 + to build)
 │   ├── step06_prices_and_battery/    real hourly prices, price forecast, battery size     (new)
-│   ├── step07_discover_neighbours/   building search around the host (used by the combined 07+08 tool)
-│   ├── step08_share_energy/          steps 07+08 as one optimiser (best group of buildings); battery agent; legal-share options (new)
-│   ├── step09_compare_investment/    owner and guest money, with and without battery      (new)
-│   ├── step10_publish_report/        one data file for the website                        (new)
+│   ├── step07_share_energy/          best group of nearby buildings (one optimiser), battery agent, legal-share options (new)
+│   ├── step08_compare_investment/    owner and guest money, with and without battery      (new)
+│   ├── step09_publish_report/        one data file for the website                        (new)
 │   ├── tests/                        offline tests for every step
 │   └── examples/                     CEP9 school example roof and its real neighbours, for the offline tests and demo
 ├── website/                          the results page (GitHub Pages)
@@ -56,9 +55,9 @@ python step06_prices_and_battery\download_prices.py
 python -m step06_prices_and_battery.prices
 python -m step06_prices_and_battery.price_model
 python -m step06_prices_and_battery.battery_size --host-dir data\host\cep9 --compare-types --out data\battery\cep9
-python -m step08_share_energy.optimise --host-dir data\host\cep9 --lat 41.40458605 --lon 2.20067448 --candidates-csv examples\cep9_members.csv --max-distance 2000 --join-rate 1 --out data\match\cep9
-python -m step08_share_energy.battery_agent --host-dir data\host\cep9 --neighbours-dir data\match\cep9 --out data\sharing\cep9
-python -m step09_compare_investment.investment --sharing-dir data\sharing\cep9 --kwp 53.34 --out data\investment\cep9
+python -m step07_share_energy.optimise --host-dir data\host\cep9 --lat 41.40458605 --lon 2.20067448 --candidates-csv examples\cep9_members.csv --max-distance 2000 --join-rate 1 --out data\match\cep9
+python -m step07_share_energy.battery_agent --host-dir data\host\cep9 --neighbours-dir data\match\cep9 --out data\sharing\cep9
+python -m step08_compare_investment.investment --sharing-dir data\sharing\cep9 --kwp 53.34 --out data\investment\cep9
 ```
 
 What it shows (details in each step's README): alone, the school uses 59% of its solar. Its four members (fire station, another institut, a civic centre and 30 homes) raise that to 99%. A battery is not worth it at an assumed €500/kWh. A better price forecast would add only about €3 a year, because tomorrow's prices are published the day before.
@@ -73,6 +72,6 @@ The full run for a real host is in [pipeline/README.md](pipeline/README.md).
 | 04 | Working. Waiting for real meter data; proxy profiles until then |
 | 05 | Rule-based estimate working. A trained model only with real meter data |
 | 06 | Working on real 2023-2025 prices. Battery prices for Europe still an ASSUMPTION; get an installer quote |
-| 07+08 | One optimiser that tries many groups of buildings, in wired (100 m) and Spanish legal (500 m, fixed shares) modes. Run on the 4 real CEP9 members; not yet run on a full Catastro search. The battery agent plans with predicted use only |
-| 09 | Working. Panel costs are assumptions |
-| 10 | Website working on the demo data (see `website/README.md`). 3D view and the real case still to do |
+| 07 | One optimiser that tries many groups of buildings, in wired (100 m) and Spanish legal (500 m, fixed shares) modes. Run on the 4 real CEP9 members; not yet run on a full Catastro search. The battery agent plans with predicted use only |
+| 08 | Working. Panel costs are assumptions |
+| 09 | Website working on the demo data (see `website/README.md`). 3D view and the real case still to do |

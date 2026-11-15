@@ -1,4 +1,4 @@
-# Step 10: Publish report
+# Step 09: Publish report
 
 **Question this step answers:** how do we show the results so anyone can check them?
 
@@ -10,11 +10,11 @@ The website shows the **CEP9 school (Institut Quatre Cantons, Poblenou)**. To re
 python -m step03_simulate_generation.shade_yield "Camí Antic de València 35, Barcelona" --laz-dir data\lidar --layout neat --out data\pv\cep9
 python -m step04_read_host_demand.host_table --solar data\pv\cep9_hourly.csv --host-kind school --host-floor-m2 1811.7 --building-id cep9 --out data\host\cep9
 python -m step06_prices_and_battery.battery_size --host-dir data\host\cep9 --compare-types --out data\battery\cep9
-python -m step07_discover_neighbours.candidates --host-dir data\host\cep9 --lat 41.40458605 --lon 2.20067448 --candidates-csv examples\cep9_members.csv --max-distance 2000 --join-rate 1 --out data\neighbours\cep9
-python -m step08_share_energy.battery_agent --host-dir data\host\cep9 --neighbours-dir data\neighbours\cep9 --prices-dir data\prices --out data\sharing\cep9
-python -m step08_share_energy.agreed_shares --host-dir data\host\cep9 --neighbours-dir data\neighbours\cep9 --shares host=0.30,homes_30=0.232 --guest-price 0 --out data\agreed\cep9
-python -m step09_compare_investment.investment --sharing-dir data\sharing\cep9 --kwp 53.34 --out data\investment\cep9
-python -m step10_publish_report.export_site_data --name cep9 --yield data\pv\cep9_yield.json --label "CEP9 school roof, Poblenou" --host-label "Institut Quatre Cantons" --host-kind school --max-distance 2000 --lat 41.40458605 --lon 2.20067448 --note "..." --reach-note "..." --host-use-note "..." --actual examples\cep9_actual.json
+python -m step07_share_energy.candidates --host-dir data\host\cep9 --lat 41.40458605 --lon 2.20067448 --candidates-csv examples\cep9_members.csv --max-distance 2000 --join-rate 1 --out data\neighbours\cep9
+python -m step07_share_energy.battery_agent --host-dir data\host\cep9 --neighbours-dir data\neighbours\cep9 --prices-dir data\prices --out data\sharing\cep9
+python -m step07_share_energy.agreed_shares --host-dir data\host\cep9 --neighbours-dir data\neighbours\cep9 --shares host=0.30,homes_30=0.232 --guest-price 0 --out data\agreed\cep9
+python -m step08_compare_investment.investment --sharing-dir data\sharing\cep9 --kwp 53.34 --out data\investment\cep9
+python -m step09_publish_report.export_site_data --name cep9 --yield data\pv\cep9_yield.json --label "CEP9 school roof, Poblenou" --host-label "Institut Quatre Cantons" --host-kind school --max-distance 2000 --lat 41.40458605 --lon 2.20067448 --note "..." --reach-note "..." --host-use-note "..." --actual examples\cep9_actual.json
 ```
 
 Why these values (all ASSUMPTIONS unless marked):

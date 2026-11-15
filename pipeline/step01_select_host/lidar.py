@@ -15,7 +15,7 @@ from shapely.geometry import box
 BUILDING_CLASS = 6        # ASPRS class for building points
 GRID_SIZE = 0.5           # metres per cell when rasterising the roof
 FLAT_SLOPE_DEG = 5.0      # a cell counts as flat below this slope
-FLAT_SHARE_NEEDED = 0.7   # roof counts as flat if this share of cells is flat
+FLAT_SHARE_NEEDED = 0.3   # ASSUMPTION (relaxed from 0.7 on Breno's decision, 15 Nov 2026): roof counts as flat if this share of cells is flat
 MIN_POINTS = 50
 UNCLASSIFIED = 1          # ASPRS class for points nobody classified
 _warned = set()

@@ -6,9 +6,9 @@ import numpy as np
 import pytest
 
 from step04_read_host_demand import host_table
-from step07_discover_neighbours import candidates as nb
-from step08_share_energy import allocation as al
-from step09_compare_investment import investment as inv
+from step07_share_energy import candidates as nb
+from step07_share_energy import allocation as al
+from step08_compare_investment import investment as inv
 
 EXAMPLE = Path(__file__).resolve().parent.parent / "examples" / "cep9_hourly.csv"
 
@@ -144,7 +144,7 @@ def test_battery_investment_rows_and_guest_slider():
     rows = inv.evaluate_battery(sharing, kwp=10)
     assert {r["scenario"] for r in rows} == {"direct_no_battery", "direct_with_battery"}
     w = next(r for r in rows if r["scenario"] == "direct_with_battery" and r["case"] == "central")
-    assert w["capex_eur"] == 10 * 1400 + 10 * 500
+    assert w["capex_eur"] == 10 * 1061 + 10 * 195
     r = res["with_battery"]
     assert inv.owner_total_at_discount(r, 0.10) == pytest.approx(r["owner_total_eur"], abs=1)
     assert inv.owner_total_at_discount(r, 0.30) < inv.owner_total_at_discount(r, 0.10)
@@ -152,7 +152,7 @@ def test_battery_investment_rows_and_guest_slider():
 
 def test_agreed_shares_fixed_and_free():
     import numpy as np
-    from step08_share_energy import agreed_shares as ag
+    from step07_share_energy import agreed_shares as ag
     gen = np.array([0.0, 10.0, 10.0])
     demands = np.array([[0, 2, 10], [0, 10, 0], [0, 10, 10]])
     shares = ag.parse_shares("host=0.5", ["host", "a", "b"])
@@ -164,8 +164,8 @@ def test_agreed_shares_fixed_and_free():
     assert res["per_building"]["a"]["saving_eur"] == 2         # free: saves its used kWh x price
 
 
-# ---- steps 07 + 08 as one tool: the group optimiser (step08_share_energy/optimise.py) -------------
-from step08_share_energy import optimise as opt
+# ---- steps 07 + 08 as one tool: the group optimiser (step07_share_energy/optimise.py) -------------
+from step07_share_energy import optimise as opt
 
 
 def _case(mode="wired"):

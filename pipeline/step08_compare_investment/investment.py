@@ -1,20 +1,20 @@
-"""Step 09: is it worth it for the owner? Money per scenario, with low/high cases.
+"""Step 08: is it worth it for the owner? Money per scenario, with low/high cases.
 
 TWO INPUTS, two parts:
-A) --allocation-dir (step 08a, allocation.py): the shared-solar scenarios without a battery,
+A) --allocation-dir (step 07a, allocation.py): the shared-solar scenarios without a battery,
    priced with flat ASSUMED prices (CASES below). Kept for comparison with the Spanish
    sharing-law options (fixed and hourly betas).
-B) --sharing-dir (step 08b, battery_agent.py): direct wiring with and without the battery,
+B) --sharing-dir (step 07b, battery_agent.py): direct wiring with and without the battery,
    priced with REAL hourly prices of 2023, 2024, 2025 and the typical year. Only the panel
    cost and upkeep come from CASES; the battery's cost comes from battery_types.py.
 
-    python -m step09_compare_investment.investment --sharing-dir data\\sharing\\demo --kwp 15.5 ^
+    python -m step08_compare_investment.investment --sharing-dir data\\sharing\\demo --kwp 15.5 ^
         --out data\\investment\\demo
 
 Too few or too many panels? The tool starts with every panel that fits. To test a smaller
 system, go back to step 03 with --max-panels N and run steps 04 to 09 again.
 
-    python -m step09_compare_investment.investment --allocation-dir data\\allocation\\nexus2 ^
+    python -m step08_compare_investment.investment --allocation-dir data\\allocation\\nexus2 ^
         --kwp 60 --out data\\investment\\nexus2
 
 Our business model (team decision, 12 Nov 2026): the owner pays for the panels and keeps them.
@@ -37,10 +37,14 @@ from pathlib import Path
 
 from step06_prices_and_battery import battery_types as bt
 
-CASES = {   # ASSUMPTIONS, Spain 2026
-    "central": {"capex_eur_per_kwp": 1400, "grid_price": 0.16, "sale_price": 0.10, "export_price": 0.05},
-    "low":     {"capex_eur_per_kwp": 1600, "grid_price": 0.13, "sale_price": 0.08, "export_price": 0.04},
-    "high":    {"capex_eur_per_kwp": 1200, "grid_price": 0.20, "sale_price": 0.12, "export_price": 0.06},
+CASES = {   # Spain 2026. Panel cost: central 1,061 EUR/kWp = Marblanc Solar's average of 10 quotes (<20 kW homes, no battery,
+            # June-Aug 2025) [marblancsolar.com/itemised-costs-solar-panels-in-spain, Breno's choice 15 Nov 2026];
+            # best case 730 = APPA 2024 (180 kW industrial, no VAT); worst case 1,400 = ASSUMPTION (old default, no source).
+            # export_price central 0.06 = Endesa Solar Plus surplus price, excl. taxes [endesa.com Solar Plus Bateria Virtual,
+            # 'last update 15 Oct 2026']. Grid and sale prices are still ASSUMPTIONS.
+    "central": {"capex_eur_per_kwp": 1061, "grid_price": 0.16, "sale_price": 0.10, "export_price": 0.06},
+    "low":     {"capex_eur_per_kwp": 1400, "grid_price": 0.13, "sale_price": 0.08, "export_price": 0.04},
+    "high":    {"capex_eur_per_kwp": 730, "grid_price": 0.20, "sale_price": 0.12, "export_price": 0.06},
 }
 OM_EUR_PER_KWP_YEAR = 15.0    # ASSUMPTION: cleaning, inverter fund, insurance
 
@@ -120,9 +124,9 @@ def evaluate_battery(sharing, kwp, cases=CASES, om=OM_EUR_PER_KWP_YEAR):
 
 
 def main():
-    ap = argparse.ArgumentParser(description="Step 09: owner and participant money per scenario")
-    ap.add_argument("--allocation-dir", help="step 08a's output folder (allocation.py)")
-    ap.add_argument("--sharing-dir", help="step 08b's output folder (battery_agent.py)")
+    ap = argparse.ArgumentParser(description="Step 08: owner and participant money per scenario")
+    ap.add_argument("--allocation-dir", help="step 07a's output folder (allocation.py)")
+    ap.add_argument("--sharing-dir", help="step 07b's output folder (battery_agent.py)")
     ap.add_argument("--kwp", type=float, required=True, help="installed kWp (step 03's <name>_yield.json)")
     ap.add_argument("--out", default="data/investment")
     args = ap.parse_args()

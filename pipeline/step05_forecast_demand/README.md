@@ -13,7 +13,24 @@ Today the answer is a **rule-based estimate**, not an AI model. It is what the g
 python -m step05_forecast_demand.bcn_data --site poblenou_quatre_cantons
 ```
 
-(An AI model, `forecast.py`, is not built: we would only train it on real meter data, and we do not have any yet.)
+| `train_profile_model.py` | **New (not yet run on real data).** Learns from real Spanish meters, by building type: (1) average kWh per day by month and weekday/weekend, (2) share of the day's use in each hour by season and weekday/weekend, (3) a gradient-boosting model of daily kWh (type, contracted power, month, weekday) tested on customers it never saw, against the plain averages | **Machine learning** + statistics |
+
+```
+python -m step05_forecast_demand.train_profile_model --metadata data\goiener\metadata.csv --series-dir data\goiener\imp-in --out data\models\demand_profile --max-series 3000
+```
+
+It needs the GoiEner data (download steps are in the script's header). The script passed its offline tests on made-up meters, but the real column names were not checked, so the first run may stop with a message telling you which name to fix.
+
+### Datasets we looked at (read 15 Nov 2026)
+
+| Dataset | What it holds | Fit |
+|---|---|---|
+| **GoiEner** [Zenodo 10.5281/zenodo.7362094; Scientific Data 2024] | Hourly kWh of 25,559 Spanish supply points, Nov 2014 to Jun 2022, with a CNAE activity code and contracted power each. Households dominate; public administration, transport, retail, hospitality have 300+ series each; some offices and industry. Basque Country 72.5%, Navarre 13.8%, Madrid 4.4%. CC BY 4.0 per the paper (the record text says CC BY-SA) | **Best open choice, used by the script.** Not Barcelona, and few offices or schools |
+| **Open Data BCN, electricity by postal code, sector and time slot** [opendata-ajuntament.barcelona.cat/data/dataset/consum-electricitat-bcn] | Datadis data for the city, per day, postal code, economic sector and time slot (MWh), CC BY 4.0, updated monthly | Real Barcelona day shape by sector; already used in `bcn_data.py`. Aggregates, so no per-building model |
+| **Madrid municipal buildings, monthly** [datos.madrid.es, 'Consumo de energía en edificios municipales. Datos mensuales'] | Monthly kWh (and gas) per building and sensor since 2020; types: administrative, cultural, sports, schools, social, health, safety; with coordinates | Yearly totals and seasons for schools, offices and fire stations; **monthly only, no hours**. Licence and file format not read. Not yet used |
+| **Building Data Genome 2** [Zenodo 3887306; CC BY 4.0] | Hourly 2016-2017, 3,053 meters in 1,636 non-residential buildings on 19 sites in North America and Europe | Many building types, hourly, but we could not confirm any site in Spain. Not yet used |
+
+Madrid was asked for by name. Its data is monthly, so it helps the daily and seasonal averages for schools and offices but not the time of day. For time of day we need GoiEner or the Barcelona time-slot data.
 
 ## What this step is good and bad at
 

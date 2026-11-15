@@ -18,14 +18,16 @@ What each field means:
 - notes               what a user should know (materials, safety, maturity)
 
 Battery life used by the tool = the shorter of calendar_years and cycle_life / cycles per year,
-so a battery that cycles every day wears out sooner (step 09 adds the replacement cost).
+so a battery that cycles every day wears out sooner (step 08 adds the replacement cost).
 """
 
-LFP_CAPEX_EUR_PER_KWH = 500.0   # ASSUMPTION: no checkable Spanish or EU installed price for a 20-500 kWh building
-                                # battery found yet (the only recent figure we found was a UK installer blog in GBP,
-                                # 200-800 per kWh depending on size [Reonic 2026], too wide and not Spanish).
-                                # For scale: PNNL 2022 gives 385 USD/kWh for a 100 MW, 4-hour LFP plant
-                                # (utility size, so cheaper per kWh) [PNNL 2022]. Replace with a Barcelona quote.
+LFP_CAPEX_EUR_PER_KWH = 195.0   # 999 EUR / 5.12 kWh nominal = 195 EUR per nameplate kWh. One shop price, tax included,
+                                # for a home-size unit (Deye SE-G5.1 Pro-B, 5.12 kWh nominal, 4.6 kWh usable), without
+                                # installation or inverter [tienda-solar.es product page, read 15 Nov 2026].
+                                # ASSUMPTION for a 20-500 kWh building battery: commercial systems add installation and
+                                # an inverter but get volume discounts, so the real price could be higher or lower.
+                                # Breno asked for an average of shop prices; only this one price could be read
+                                # (the category page lists no products to the fetch tool). Replace with a Barcelona quote.
 
 TYPES = {
     "lfp": {

@@ -13,7 +13,7 @@ Writes <out>_yield.json (totals, monthly kWh, every panel), <out>_hourly.csv
 The hourly CSV is what step 04 (host table) reads.
 
 Panels: by default every panel that fits (team decision: fill the roof). To try a smaller
-system after seeing the money in step 09, run again with --max-panels N; the N panels that
+system after seeing the money in step 08, run again with --max-panels N; the N panels that
 produce most are kept.
 
 Layout options (see options.py): every run also works out three layouts, "max" (fill the

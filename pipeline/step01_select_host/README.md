@@ -52,7 +52,7 @@ Download the tiles that cover your test buildings from the **ICGC Territorial Li
 1. Take the LiDAR points classed as **building** (class 6) inside the Catastro footprint.
 2. Make a 0.5 m height grid from them, keeping the highest point per cell.
 3. Measure the slope of each cell. Cells under 5° count as flat.
-4. The roof counts as flat if at least **70%** of the cells are flat. Stair housings and tanks make small steep patches, so a flat roof with obstacles still passes.
+4. The roof counts as flat if at least **30%** of the cells are flat (ASSUMPTION; it was 70% until 15 Nov 2026, relaxed on the team's decision so that A160 at 33% passes). Stair housings and tanks make small steep patches, so a flat roof with obstacles still passes.
 
 The thresholds are at the top of `lidar.py`, ready for tuning once we've seen real Barcelona roofs.
 
@@ -67,7 +67,7 @@ The same list is on the website (step 01 card), read from `known_gaps.json` in t
 | Heritage protection is unknown (flag stays empty) | The city's protected-heritage catalogue exists as open data (Open Data BCN, CC BY 4.0, 3 resources) but we have not downloaded it, so heritage_protected is null. | On a laptop: download the dataset, check which file has a cadastral reference or a polygon, and pass it with --heritage. |
 | Plots with several buildings | The code picks the building containing the point, or else the largest one, and adds a warning. Not yet tested on a plot with several roofs. | Test on one such plot in Poblenou and let the user choose the building from a list. |
 | Floors = highest building part | For blocks with a set-back top floor, the count includes the extension. Floors only feed the demand estimate of step 05, not the roof. | Compare Catastro floors with LiDAR height for 10 buildings and fix any that are far off. |
-| Flat-roof check rejects roofs that are mostly sloped | A160 reads 33% flat cells (limit 70%), so it is flagged 'not flat: outside the tool's scope', although it still produced 219 panels. | Decide whether to relax the 70% limit or to lay panels on the flat parts only. |
+| Flat-roof limit was strict | A160 reads 33% flat cells. The limit was 70%, so it was flagged "not flat". Relaxed to 30% on 15 Nov 2026 (team decision). | Check on more roofs that 30% does not let steeply pitched roofs through. |
 
 Catastro's WFS parameter really is spelled `STOREDQUERIE_ID`, in Catastro's own spelling. The live runs worked with it. If the WFS returns an error one day, check the stored-query names (`GetBuildingByParcel`, `GetBuildingPartByParcel`) in the service's GetCapabilities.
 

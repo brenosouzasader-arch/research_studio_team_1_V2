@@ -1,8 +1,8 @@
 """Step 07: discover nearby buildings that could join, and shortlist the closest 3-5 that fit.
 
-    python -m step07_discover_neighbours.candidates --host-dir data\\host\\nexus2 ^
+    python -m step07_share_energy.candidates --host-dir data\\host\\nexus2 ^
         --host "Carrer de Jordi Girona 29, Barcelona" --out data\\neighbours\\nexus2
-    python -m step07_discover_neighbours.candidates --host-dir data\\host\\demo ^
+    python -m step07_share_energy.candidates --host-dir data\\host\\demo ^
         --candidates-csv my_candidates.csv --out data\\neighbours\\demo
 
 DISTANCE (team decision, 15 Nov 2026): the default tool ignores the Spanish sharing law so it

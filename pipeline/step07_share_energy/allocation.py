@@ -1,6 +1,6 @@
-"""Step 08: share the host's output among the host and the shortlisted buildings, hour by hour.
+"""Step 07: share the host's output among the host and the shortlisted buildings, hour by hour.
 
-    python -m step08_share_energy.allocation --host-dir data\\host\\nexus2 ^
+    python -m step07_share_energy.allocation --host-dir data\\host\\nexus2 ^
         --neighbours-dir data\\neighbours\\nexus2 --out data\\allocation\\nexus2
 
 For each hour h: G[h] = PV output, D[i,h] = use of participant i (the host is participant 0),
@@ -37,7 +37,7 @@ from pathlib import Path
 import numpy as np
 
 from step04_read_host_demand.host_table import read_host_table
-from step07_discover_neighbours.candidates import read_demand
+from step07_share_energy.candidates import read_demand
 
 TOL = 1e-6
 
@@ -139,7 +139,7 @@ def write(out_dir, times, ids, results):
 
 
 def main():
-    ap = argparse.ArgumentParser(description="Step 08: host-only, fixed and hourly allocation")
+    ap = argparse.ArgumentParser(description="Step 07: host-only, fixed and hourly allocation")
     ap.add_argument("--host-dir", required=True, help="step 04's output folder")
     ap.add_argument("--neighbours-dir", required=True, help="step 07's output folder")
     ap.add_argument("--actual", help="optional demand_hourly.csv with ACTUAL use (meter data) to test the betas on")

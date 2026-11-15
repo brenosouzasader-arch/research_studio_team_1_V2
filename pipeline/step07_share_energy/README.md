@@ -1,10 +1,10 @@
-# Steps 07 + 08: Match and share (one optimiser)
+# Step 07: Match and share (one optimiser)
 
 **Question this tool answers:** of all the buildings within reach of the roof, which group should share its solar, so that the most energy is used and the least is sent back to the grid?
 
 **Roadmap:** input = G[h], all D[i,h], coefficient and contract constraints → output = allocation per hour, allocated kWh, export.
 
-Steps 07 (find neighbours) and 08 (share energy) used to be separate: step 07 took the closest few buildings, step 08 shared the power among them. Now `optimise.py` does both in one go. It takes **every** building within reach and tries **many combinations** of them, hour by hour for the whole year, and keeps the combination that
+Steps 07 (find neighbours) and 08 (share energy) used to be separate: step 07 took the closest few buildings, step 07 shared the power among them. Now `optimise.py` does both in one go. It takes **every** building within reach and tries **many combinations** of them, hour by hour for the whole year, and keeps the combination that
 
 1. **wastes the least solar** (the most kWh used by the host and the guests together; waste = sent to the grid), then
 2. **earns the owner the most money**.
@@ -12,8 +12,8 @@ Steps 07 (find neighbours) and 08 (share energy) used to be separate: step 07 to
 A building only counts if it adds at least 250 kWh a year of used solar on top of the others, and a group has at most 6 guests (both **ASSUMPTIONS**; the first is the stopping rule of the team's matchmaker diagram). No guest ever pays more than the grid: guests pay (1 − discount) × the PVPC of every hour.
 
 ```
-python -m step08_share_energy.optimise --host-dir data\host\cep9 --lat 41.40458605 --lon 2.20067448 --candidates-csv examples\cep9_members.csv --mode wired --max-distance 2000 --join-rate 1 --out data\match\cep9_wired
-python -m step08_share_energy.optimise --host-dir data\host\cep9 --lat 41.40458605 --lon 2.20067448 --candidates-csv examples\cep9_members.csv --mode legal --max-distance 2000 --join-rate 1 --out data\match\cep9_legal
+python -m step07_share_energy.optimise --host-dir data\host\cep9 --lat 41.40458605 --lon 2.20067448 --candidates-csv examples\cep9_members.csv --mode wired --max-distance 2000 --join-rate 1 --out data\match\cep9_wired
+python -m step07_share_energy.optimise --host-dir data\host\cep9 --lat 41.40458605 --lon 2.20067448 --candidates-csv examples\cep9_members.csv --mode legal --max-distance 2000 --join-rate 1 --out data\match\cep9_legal
 ```
 
 Leave out `--candidates-csv` to search Catastro for every plot within reach (needs internet, from a laptop).
@@ -55,7 +55,7 @@ In both modes the best group is all 4 members (fire station, Maria Espinalt, Can
 1. **`battery_agent.py`**: runs the battery for the host and its guests (wired mode). How it decides is in [step 06's README](../step06_prices_and_battery/README.md#how-the-battery-controller-decides). Every day it plans 48 hours ahead, carries out 24 and plans again. Goals in order: waste no solar, most money for the owner, no guest pays more than the grid.
 
    ```
-   python -m step08_share_energy.battery_agent --host-dir data\host\cep9 --neighbours-dir data\match\cep9_wired --prices-dir data\prices --out data\sharing\cep9
+   python -m step07_share_energy.battery_agent --host-dir data\host\cep9 --neighbours-dir data\match\cep9_wired --prices-dir data\prices --out data\sharing\cep9
    ```
 
    It checks the battery size again with the guests, runs the chosen size on the real 2023, 2024 and 2025 prices and the typical year, and tests the price forecast by money. Options: `--type nmc`, `--guest-discount 0.10`, `--no-export`, `--battery-kwh 20`. Outputs: `battery_agent_summary.json` and `decisions_hourly.csv` (every hour: solar, price, battery, export and each building's sources; training data for a future learned controller). **Limitation:** the plan uses each building's *predicted* use and is carried out as planned; a real controller would correct itself every hour with meters.

@@ -1,9 +1,9 @@
-"""Steps 07 + 08 as one tool: find the best group of neighbours to share the roof with.
+"""Step 07 (neighbours and sharing in one tool): find the best group of neighbours to share the roof with.
 
-    python -m step08_share_energy.optimise --host-dir data\\host\\cep9 --lat 41.40458605 --lon 2.20067448 ^
+    python -m step07_share_energy.optimise --host-dir data\\host\\cep9 --lat 41.40458605 --lon 2.20067448 ^
         --candidates-csv examples\\cep9_members.csv --mode wired --out data\\match\\cep9
 
-Step 07 used to pick the closest buildings and step 08 then shared the power. This tool does both
+Step 07 used to pick the closest buildings and step 07 then shared the power. This tool does both
 in one go. It takes EVERY building within reach of the host and tries many combinations of them,
 hour by hour for the whole year, looking for the combination that
 
@@ -32,7 +32,7 @@ repeats from random starting groups; "tried" says how many different groups were
 At most --max-guests buildings are in a group (default 6: more cables and contracts are hard to run).
 
 The chosen group is written in step 07's format (shortlist.csv, candidate_buildings.geojson,
-demand_hourly.csv), so the battery agent (battery_agent.py) and steps 09-10 run on it unchanged.
+demand_hourly.csv), so the battery agent (battery_agent.py) and steps 08-10 run on it unchanged.
 
 Outputs in --out: match_summary.json (every number below), plus step 07's three files.
 """
@@ -47,7 +47,7 @@ import numpy as np
 
 from step04_read_host_demand.host_table import read_host_table
 from step06_prices_and_battery.prices import read_solar_year_prices
-from step07_discover_neighbours import candidates as nb
+from step07_share_energy import candidates as nb
 
 MAX_GUESTS = 6              # ASSUMPTION: more guests than this is hard to wire and to contract
 MIN_GAIN_KWH = 250.0        # ASSUMPTION: a building must add this much used solar a year to be worth joining
@@ -199,7 +199,7 @@ def run(host, candidates, host_latlon, prices_dir, mode="wired", max_distance=No
 
 
 def main():
-    ap = argparse.ArgumentParser(description="Steps 07+08: find the best group of neighbours and share the solar")
+    ap = argparse.ArgumentParser(description="Step 07: find the best group of neighbours and share the solar")
     ap.add_argument("--host-dir", required=True, help="step 04's output folder for the host")
     ap.add_argument("--host", help="host address (for its position and to leave it out)")
     ap.add_argument("--lat", type=float)
@@ -249,7 +249,7 @@ def main():
             print(f"      {m['building']}: adds {m['adds_kwh']:,} kWh used a year")
     nxt = ("battery_agent --host-dir ... --neighbours-dir " + str(out)) if args.mode == "wired" else \
           "allocation or agreed_shares with --neighbours-dir " + str(out)
-    print(f"-> {out}   next: python -m step08_share_energy.{nxt}")
+    print(f"-> {out}   next: python -m step07_share_energy.{nxt}")
 
 
 if __name__ == "__main__":

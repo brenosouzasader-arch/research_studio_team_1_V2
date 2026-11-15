@@ -1,13 +1,13 @@
-"""Step 10: collect the results of steps 03-09 into one file for the website.
+"""Step 09: collect the results of steps 03-09 into one file for the website.
 
-    python -m step10_publish_report.export_site_data --name cep9 --yield data\\pv\\cep9_yield.json --label "..." --lat .. --lon ..
+    python -m step09_publish_report.export_site_data --name cep9 --yield data\\pv\\cep9_yield.json --label "..." --lat .. --lon ..
 
 It reads the output folders that the earlier steps wrote (data\\host\\<name>,
 data\\prices, data\\battery\\<name>, data\\neighbours\\<name>, data\\sharing\\<name>,
 data\\investment\\<name>) and docs\\SOURCES.md, and writes ..\\website\\data\\site_data.json.
 
 The website only reads that file: it does no modelling of its own, except the
-guest-price slider, which uses the same formula as step 09 (owner_total_at_discount).
+guest-price slider, which uses the same formula as step 08 (owner_total_at_discount).
 
 Every headline number goes into "facts" with:
 - kind: "measured" (from a meter or a real price), "modelled" (computed by the pipeline)
@@ -29,7 +29,7 @@ from step04_read_host_demand.host_table import read_host_table
 from step06_prices_and_battery import battery_types as bt
 from step06_prices_and_battery import dispatch
 from step06_prices_and_battery.prices import local_hour, read_solar_year_prices
-from step07_discover_neighbours.candidates import read_demand
+from step07_share_energy.candidates import read_demand
 
 SHOWCASE_KWH = 10.0        # battery size used only to illustrate a day when the agent picks none
 
@@ -165,7 +165,7 @@ def read_sources(path):
 
 
 def main():
-    ap = argparse.ArgumentParser(description="Step 10: one data file for the website")
+    ap = argparse.ArgumentParser(description="Step 09: one data file for the website")
     ap.add_argument("--name", required=True, help="the folder name used in data\\<step>\\<name>")
     ap.add_argument("--yield", dest="yield_json", required=True, help="step 03's <name>_yield.json")
     ap.add_argument("--label", required=True, help="what the website calls this case")
@@ -258,7 +258,7 @@ def main():
         if day_idx[k] < 365:
             smap[day_idx[k]][hour[k]] = round(float(surplus[k]), 2)
 
-    # money slider bases per price year (owner_total_at_discount in step 09)
+    # money slider bases per price year (owner_total_at_discount in step 08)
     slider = {}
     for yname, r in share["price_years"].items():
         for label in ("with_battery", "without_battery"):
@@ -289,13 +289,13 @@ def main():
         "host_self_share": fact(hs["self_consumption_ratio"], "modelled", "step 04"),
         "surplus_kwh": fact(hs["surplus_kwh"], "modelled", "step 04", "kWh/yr"),
         "surplus_weekend_kwh": fact(hs["surplus_weekend_kwh"], "modelled", "step 04", "kWh/yr"),
-        "shared_used_share": fact(typ["without_battery"]["used_share"], "modelled", "step 08"),
-        "shared_wasted_kwh": fact(typ["without_battery"]["wasted_kwh"], "modelled", "step 08", "kWh/yr"),
+        "shared_used_share": fact(typ["without_battery"]["used_share"], "modelled", "step 07"),
+        "shared_wasted_kwh": fact(typ["without_battery"]["wasted_kwh"], "modelled", "step 07", "kWh/yr"),
         "owner_eur": fact(typ["without_battery"]["owner_total_eur"], "modelled",
-                          "step 08", "€/yr", "typical-year PVPC [REE]"),
+                          "step 07", "€/yr", "typical-year PVPC [REE]"),
         "guests_saving_eur": fact(typ["without_battery"]["guests_saving_eur"], "modelled",
-                                  "step 08", "€/yr", "guest price PVPC − 10%"),
-        "battery_chosen_kwh": fact(share["battery_kwh"], "modelled", "step 08", "kWh", "size re-checked with the guests"),
+                                  "step 07", "€/yr", "guest price PVPC − 10%"),
+        "battery_chosen_kwh": fact(share["battery_kwh"], "modelled", "step 07", "kWh", "size re-checked with the guests"),
         "lfp_price": fact(round(bt.LFP_CAPEX_EUR_PER_KWH), "assumption", "battery_types.py", "€/kWh",
                           "no checkable European building-battery price found"),
         "lfp5_break_even": fact(lfp5["break_even_eur_per_kwh"] if lfp5 else None, "modelled", "step 06", "€/kWh"),
@@ -307,8 +307,8 @@ def main():
         "baseline_mae": fact(min(m2["same_hour_last_week"]["mae"], m2["typical_year"]["mae"]), "modelled",
                              "step 06", "€/kWh"),
         "forecast_worth_eur": fact(share["forecast_test_2025"]["most_a_better_forecast_could_add_eur"], "modelled",
-                                   "step 08", "€/yr", "2025, perfect vs typical-year forecast"),
-        "pv_capex": fact(capex.get("direct_no_battery"), "assumption", "step 09", "€", "€1,400 per kWp"),
+                                   "step 07", "€/yr", "2025, perfect vs typical-year forecast"),
+        "pv_capex": fact(capex.get("direct_no_battery"), "assumption", "step 08", "€", "€1,061 per kWp (Marblanc Solar average of 10 quotes, homes under 20 kW)"),
     }
 
     warnings = []

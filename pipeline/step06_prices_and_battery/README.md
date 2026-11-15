@@ -2,7 +2,7 @@
 
 **Question this step answers:** is a battery at the host worth it, and if so, how big?
 
-It sits between step 05 (how much each building uses, hour by hour) and step 07 (which neighbours join), because the battery belongs to the roof owner and is first sized for the host alone. Step 08 checks the size again once the guests are known.
+It sits between step 05 (how much each building uses, hour by hour) and step 07 (which neighbours join), because the battery belongs to the roof owner and is first sized for the host alone. Step 07 checks the size again once the guests are known.
 
 Every number below comes from a source in [docs/SOURCES.md](../../docs/SOURCES.md) or is marked **ASSUMPTION**.
 
@@ -24,7 +24,7 @@ So a battery can store cheap midday solar and use it in the dear evening. The qu
 | `prices.py` | Reads the REE file, turns €/MWh into €/kWh, and lines every hour up with the solar year (keeping weekdays, so a Monday stays a Monday). Also says which tariff period each hour is in (2.0TD for small supplies, 3.0TD for big buildings). |
 | `price_model.py` | Predicts the PVPC 2 to 7 days ahead with a machine-learning model, and checks it against two simple rules. |
 | `battery_types.py` | The two batteries you can compare: LFP (default) and NMC, each with cost, efficiency and life, and a source for each number. Sodium-ion, vanadium flow and second-life car batteries were removed on 15 Nov 2026: we found no checkable numbers for them at building size. |
-| `dispatch.py` | The battery controller. Decides every hour where the solar goes: to the host, a guest, the battery or the grid. Used here and in step 08. |
+| `dispatch.py` | The battery controller. Decides every hour where the solar goes: to the host, a guest, the battery or the grid. Used here and in step 07. |
 | `battery_size.py` | Tries battery sizes from 0 to 200 kWh for the host and says which one, if any, pays for itself. |
 
 ## How to run it
@@ -70,7 +70,7 @@ Options for `battery_size`: `--price-year 2023` (or 2024, 2025; default `typical
 | 6 | 0.0220 | 0.0250 | 0.0225 | model |
 | 7 | 0.0234 | 0.0250 | 0.0225 | typical year |
 
-**Does a better forecast earn money?** Step 08 runs 2025 twice with a 10 kWh battery on the CEP9 case: once with perfect knowledge of the second day's prices, once using the typical-year price. The difference was **€3 a year** (€7,625 against €7,622). Because tomorrow's prices are published in advance and the battery empties every evening, a better long-range forecast hardly changes what the battery does. The forecast is more useful for the investment question (what will prices look like in future years) than for daily control.
+**Does a better forecast earn money?** Step 07 runs 2025 twice with a 10 kWh battery on the CEP9 case: once with perfect knowledge of the second day's prices, once using the typical-year price. The difference was **€3 a year** (€7,625 against €7,622). Because tomorrow's prices are published in advance and the battery empties every evening, a better long-range forecast hardly changes what the battery does. The forecast is more useful for the investment question (what will prices look like in future years) than for daily control.
 
 ## How the battery controller decides
 
@@ -82,7 +82,7 @@ Goals, in this order:
 2. **Then make the owner the most money.** A kWh the host uses saves it the PVPC; a kWh sold to a guest earns 90% of the PVPC; an exported kWh earns the wholesale price.
 3. **No guest ever pays more than the grid.** Guests pay 90% of the PVPC of that same hour, only for what they use. The code checks every guest's bill.
 
-How: once a day the controller plans the next 48 hours as a linear program (scipy's HiGHS solver), carries out the first 24 hours, and plans again. A linear program is a standard maths method that finds the best plan within limits: the battery's size and power, each building's use, and energy that can't come from nowhere. It is a transparent optimiser, not a trained AI. Every hour's decision is saved (step 08's `decisions_hourly.csv`) so a faster learned controller (supervised or reinforcement learning) can be trained on it later.
+How: once a day the controller plans the next 48 hours as a linear program (scipy's HiGHS solver), carries out the first 24 hours, and plans again. A linear program is a standard maths method that finds the best plan within limits: the battery's size and power, each building's use, and energy that can't come from nowhere. It is a transparent optimiser, not a trained AI. Every hour's decision is saved (step 07's `decisions_hourly.csv`) so a faster learned controller (supervised or reinforcement learning) can be trained on it later.
 
 ## How the size is chosen
 
@@ -99,14 +99,14 @@ Before that there is a quick **screen** with no battery model: day by day, how m
 
 ## Result so far
 
-No real result yet. The only run is on the CEP9 school, whose use is an estimate (the 2018 average of Barcelona's municipal institutes, not the school's meter) and whose battery price is an ASSUMPTION. There LFP at €500/kWh does not pay for itself at any size, and a 5 kWh battery would break even at about €230/kWh (modelled; see the website's battery section). **Do not use this to decide a battery size.** The decision needs the owner's real meter data and a Barcelona installer's quote.
+No real result yet. The only run is on the CEP9 school, whose use is an estimate (the 2018 average of Barcelona's municipal institutes, not the school's meter) and whose battery price is an ASSUMPTION. The earlier run used €500/kWh, where no size paid. The price is now €195/kWh (see below), so that result is out of date: rerun step 06 `battery_size` on the laptop. **Do not use this to decide a battery size.** The decision needs the owner's real meter data and a Barcelona installer's quote.
 
 ## Battery numbers and where they come from
 
 | Type | €/kWh installed | Round trip | Cycle life | Calendar life | Usable share |
 |---|---|---|---|---|---|
-| LFP (default) | 500 **ASSUMPTION** | 85% [NREL ATB 2024] | 2,400 [PNNL 2022] | 15 y [NREL ATB 2024] | 80% [PNNL 2022] |
-| NMC | 565 (LFP × 435/385 [PNNL 2022]) | 85% [NREL ATB 2024] | 1,520 [PNNL 2022] | 13 y [PNNL 2022] | 80% [PNNL 2022] |
+| LFP (default) | 195 (shop price, one product; **ASSUMPTION** for big buildings) | 85% [NREL ATB 2024] | 2,400 [PNNL 2022] | 15 y [NREL ATB 2024] | 80% [PNNL 2022] |
+| NMC | 220 (LFP × 435/385 [PNNL 2022]) | 85% [NREL ATB 2024] | 1,520 [PNNL 2022] | 13 y [PNNL 2022] | 80% [PNNL 2022] |
 
 Both: upkeep 2.5% of capex a year [NREL ATB 2024] and charge or discharge at up to half the size per hour (a 2-hour battery, **ASSUMPTION**).
 

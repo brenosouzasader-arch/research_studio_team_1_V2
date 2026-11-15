@@ -1,6 +1,6 @@
-"""Step 08b: share solar AND the host's battery with the guests, hour by hour, for a whole year.
+"""Step 07b: share solar AND the host's battery with the guests, hour by hour, for a whole year.
 
-    python -m step08_share_energy.battery_agent --host-dir data\\host\\demo ^
+    python -m step07_share_energy.battery_agent --host-dir data\\host\\demo ^
         --neighbours-dir data\\neighbours\\demo --prices-dir data\\prices --out data\\sharing\\demo
 
 This is the "agent" that runs the battery. Default set-up (team decision, 15 Nov 2026):
@@ -46,7 +46,7 @@ from step06_prices_and_battery import battery_types as bt
 from step06_prices_and_battery import dispatch
 from step06_prices_and_battery.battery_size import size_battery
 from step06_prices_and_battery.prices import read_solar_year_prices
-from step07_discover_neighbours.candidates import read_demand
+from step07_share_energy.candidates import read_demand
 
 SIZES_KWH = (0, 10, 20, 50, 100, 200)
 GUEST_DISCOUNT = 0.10      # team choice (15 Nov 2026): guests pay PVPC - 10%; a slider on the report page
@@ -79,7 +79,7 @@ def write_decisions(path, times, gen, pvpc, ids, demand, flows):
 
 
 def main():
-    ap = argparse.ArgumentParser(description="Step 08b: solar + battery shared with guests, hour by hour")
+    ap = argparse.ArgumentParser(description="Step 07b: solar + battery shared with guests, hour by hour")
     ap.add_argument("--host-dir", required=True, help="step 04's output folder")
     ap.add_argument("--neighbours-dir", required=True, help="step 07's output folder")
     ap.add_argument("--prices-dir", default="data/prices", help="step 06a's output folder")

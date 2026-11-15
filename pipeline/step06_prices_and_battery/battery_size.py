@@ -5,7 +5,7 @@
     add --compare-types to try every battery type in battery_types.py, not only LFP
 
 WHY HERE: the battery is sized for the host first (between step 05 and step 07), because the
-owner pays for it. Step 08 checks the size again once the guests are known.
+owner pays for it. Step 07 checks the size again once the guests are known.
 
 WHAT IT DOES:
 1. A quick screen, with no battery model: day by day, how much midday surplus could have
@@ -24,7 +24,7 @@ WHAT IT DOES:
       break-even price  = the installed EUR per kWh at which net per year would be 0
                           (compare with capex_eur_per_kwh: how much cheaper batteries must get)
    The recommended size is the one with the highest net per year. If no size is above zero,
-   the battery is not viable for the host alone (it may still be with guests: step 08).
+   the battery is not viable for the host alone (it may still be with guests: step 07).
 
 Prices: real PVPC and wholesale prices from step 06a, "typical" year by default
 (--price-year 2023, 2024 or 2025 to test one real year).
@@ -146,7 +146,7 @@ def main():
               f"  {r['net_per_year_eur']:>10,}  {str(r['simple_payback_y'] or '-'):>7}  {r['break_even_eur_per_kwh'] or '-'}")
     for t, b in best.items():
         print(f"{t}: " + (f"best size {b['battery_kwh']:g} kWh, +{b['net_per_year_eur']:,} EUR/yr after paying for it"
-                          if b else "no size pays for itself for the host alone (check again with guests in step 08)"))
+                          if b else "no size pays for itself for the host alone (check again with guests in step 07)"))
     print(f"-> {out}")
 
 

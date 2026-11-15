@@ -1,7 +1,7 @@
 /* Roofscapes (Re)Powered website. Reads data/site_data.json (written by
-   pipeline/step10_publish_report/export_site_data.py) and draws every section.
+   pipeline/step09_publish_report/export_site_data.py) and draws every section.
    No modelling happens here except the guest-discount slider, which uses the same
-   formula as step 09 (owner_total_at_discount). Charts are plain SVG. */
+   formula as step 08 (owner_total_at_discount). Charts are plain SVG. */
 (function () {
   "use strict";
   const NS = "http://www.w3.org/2000/svg";
@@ -406,7 +406,7 @@
       host.replaceChildren(); lg.replaceChildren();
       const fn = v.funnel;
       if (!fn) {
-        host.textContent = "The step-by-step numbers for this layout are not in the data yet. Next: rerun step 03 (shade_yield) and step 10 so every layout carries its panel counts and the reasons panels were dropped.";
+        host.textContent = "The step-by-step numbers for this layout are not in the data yet. Next: rerun step 03 (shade_yield) and step 09 so every layout carries its panel counts and the reasons panels were dropped.";
         host.className = "note";
         return;
       }
@@ -702,7 +702,7 @@
       const d = slider.value / 100;
       $("discount-out").textContent = slider.value + "%";
       const b = M.slider[sel.value][scen];
-      // same formula as step 09 owner_total_at_discount()
+      // same formula as step 08 owner_total_at_discount()
       const owner = b.host_saving + (1 - d) * b.guests_value + b.export;
       const guests = d * b.guests_value;
       const net = owner - om;
@@ -790,7 +790,7 @@
 
   if (window.SITE_DATA) start(window.SITE_DATA);
   else fetch("data/site_data.json").then((r) => r.json()).then(start).catch((e) => {
-    document.querySelector(".wrap").prepend(Object.assign(document.createElement("p"), { className: "banner", textContent: "Could not load data/site_data.json. Run python -m step10_publish_report.export_site_data from the pipeline folder." }));
+    document.querySelector(".wrap").prepend(Object.assign(document.createElement("p"), { className: "banner", textContent: "Could not load data/site_data.json. Run python -m step09_publish_report.export_site_data from the pipeline folder." }));
     console.error(e);
   });
 })();
