@@ -15,7 +15,7 @@ Source: V1 repository, `main` as of 6 Nov 2026 (the pipeline is the same in Bren
 | `step5/bcn_data.py` | `step05_forecast_demand/bcn_data.py` | takes `--site` |
 | `step4/roof_test_set.py` (parcel download only) | `step01_select_host/parcels.py` | the general part only, without the Eixample block numbering |
 | `smoke_test.py`, tests for steps 1, 2 (LiDAR), 4, weather | `pipeline/`, `pipeline/tests/` | renamed by step; the 3D-map export test removed |
-| examples: Bruc 59, Diputació 311, Llúria 56 | `pipeline/examples/` | none |
+| examples: Bruc 59 hourly output and yield | `pipeline/examples/` | none (Diputació 311 and Llúria 56 removed on 15 Nov 2026, see below) |
 
 ## Reworked into new steps
 
@@ -23,7 +23,6 @@ Source: V1 repository, `main` as of 6 Nov 2026 (the pipeline is the same in Bren
 |---|---|
 | `step5/sharing.py`: own use first, then share the surplus; greedy "who takes the most" | `step04_read_host_demand/host_table.py` and `step07_discover_neighbours/candidates.py` |
 | `step5/communities.py`: fixed beta by sunny-hour use; prices and costs | `step08_share_energy/allocation.py` (`fixed`) and `step09_compare_investment/investment.py` |
-| Research prototypes (matchmaker, fair shares, community size) | `prototypes/` as reference |
 
 ## Left out (still in V1)
 
@@ -35,3 +34,14 @@ Source: V1 repository, `main` as of 6 Nov 2026 (the pipeline is the same in Bren
 | `step5/communities.py` (co-investment) | The business model changed: the owner now keeps the panels |
 | `web/` and `website/` (3D map) | Comes back in step 10 when we build the new view |
 | `website_matchsol/` | Hourly-matching web prototype; its logic is now in steps 07-08 |
+
+## Removed from V2 on 15 Nov 2026 (to keep the repository clean)
+
+Nothing below is used by the code or the tests. All of it is still in this repository's git history (commit `387dad8` and earlier), so it can be brought back with `git checkout 387dad8 -- <path>`.
+
+| Removed | What it was | Where its content lives now |
+|---|---|---|
+| `prototypes/` (`community_size_sim.py`, `matchmaker_test.py`, `fair_shares_test.py`, `two_roofs_test.py`) | Quick tests from the post-midterm research (11-12 Nov 2026) with made-up profiles | Their ideas are built into steps 07 (shortlist, `fit_kwh`) and 08 (shares). The second-roof idea was not built |
+| `docs/roadmap-recommendations.md` | Our 13 Nov comments on the Track 2 roadmap | Acted on: hourly shares, owner value with every guest saving, money test of the forecast (step 08), `zoneinfo` time zones (step 06) |
+| `docs/test-sites.md` | Ranked list of Barcelona test sites | `sites/*.json` and the "Test sites and city context" sources in `docs/SOURCES.md` |
+| `pipeline/examples/` Diputació 311 and Llúria 56 files, Bruc 59 panel map (`.geojson`, `.png`) | V1 outputs for other Eixample roofs | Still in V1. The demo only needs `bruc59_hourly.csv`, `bruc59_yield.json` (source of the 15.5 kWp) and `demo_candidates.csv` |

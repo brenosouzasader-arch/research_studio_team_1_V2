@@ -31,4 +31,4 @@ Outputs: `candidate_buildings.geojson`, `shortlist.csv`, `demand_hourly.csv` (th
 
 Demo (examples\demo_candidates.csv): of 5 made-up buildings, 2 are within 100 m (homes at 50 m and a shop at 93 m). The school at 161 m and the homes at 144 m would join only in legal mode.
 
-Reworked from V1: the greedy "who takes the most surplus" idea from step 5b (`sharing.py`) and the prototype matchmaker (`../../prototypes/matchmaker_test.py`).
+Reworked from V1: the greedy "who takes the most surplus" idea from step 5b (`sharing.py`).

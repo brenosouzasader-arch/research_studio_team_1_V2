@@ -3,7 +3,7 @@
   "why": "A real energy community (CEP9) already shares this school roof's output with 30 homes and 4 public buildings, so we can check our numbers against real ones. 22@ offices nearby are weekend-closed hosts.",
   "center": {"lat": 41.4015, "lon": 2.1975, "note": "APPROXIMATE centre of the zone; check on a map"},
   "postal_codes": ["08005", "08018"],
-  "max_distance_m": 500,
+  "max_distance_m": 100,
   "hosts": [
     {"name": "Institut Quatre Cantons (school roof, CEP9)", "address": "CHECK: exact address of Institut Quatre Cantons, Barcelona", "kind": "school",
      "real_numbers": {"kwp": 58.32, "panels": 108, "yearly_kwh": 73750, "households": 30,

@@ -28,10 +28,9 @@ research_studio_team_1_V2/
 │   ├── step09_compare_investment/    owner and guest money, with and without battery      (new)
 │   ├── step10_publish_report/        3D view + report                                     (to build)
 │   ├── tests/                        offline tests for every step
-│   └── examples/                     real outputs to try things without internet
+│   └── examples/                     Bruc 59 example roof + made-up neighbours, for the demo
 ├── sites/                            one settings file per candidate test site (Poblenou, UPC)
-├── prototypes/                       post-midterm quick tests, kept for reference
-└── docs/                             SOURCES.md (every source and what it backs up), test sites, recommendations
+└── docs/SOURCES.md                   every source, and what each one backs up
 ```
 
 ## The test site is still open

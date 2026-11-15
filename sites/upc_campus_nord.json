@@ -3,7 +3,7 @@
   "why": "UPC's SIRENA system meters buildings every 15 minutes (data on request), and the campus's existing 250 kWp of panels is only about 50% used on site, so surplus is real. Best place to train the demand model.",
   "center": {"lat": 41.3893, "lon": 2.1133, "note": "APPROXIMATE centre of the campus; check on a map"},
   "postal_codes": ["08034"],
-  "max_distance_m": 500,
+  "max_distance_m": 100,
   "hosts": [
     {"name": "Nexus II", "address": "Carrer de Jordi Girona 29, Barcelona", "kind": "office"},
     {"name": "Vèrtex", "address": "CHECK: address of edifici Vèrtex, UPC, Barcelona", "kind": "office"},
