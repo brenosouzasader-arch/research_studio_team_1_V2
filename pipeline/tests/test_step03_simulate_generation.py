@@ -237,3 +237,13 @@ def test_combine_roofs_adds_two_roofs(tmp_path):
     assert r["yield"]["panels"] == 20 and r["yield"]["yearly_kwh"] == 2000 and r["yield"]["peak_hour_kw"] == 3.0
     assert {q["roof"] for q in r["variants"][0]["panel_list"]} == {"red", "yellow"}
     assert (tmp_path / "both_hourly.csv").exists() and r["variants"][0]["monthly_kwh"] == [20] * 12
+
+
+def test_custom_panel_size_changes_the_count(offline, monkeypatch):
+    monkeypatch.setattr(shade_yield, "load_tmy", lambda path: _clear_sky_year())
+    (offline / "tmy.json").write_text("{}")
+    def run(**kw):
+        return shade_yield.shade_yield(str(offline), "test", weather_path=str(offline / "tmy.json"),
+                                       out=str(offline / "o" / "roof"), **kw)["yield"]
+    base, big, small = run(panel_wp=540), run(panel_wp=540, panel_size=(2.6, 1.3)), run(panel_wp=540, panel_size=(1.7, 1.0))
+    assert big["panels"] < base["panels"] < small["panels"]

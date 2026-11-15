@@ -85,3 +85,9 @@ First test, CEP9 school (15 Nov 2026): the real system is 108 panels of 540 W in
 ## Fewer panels (`--max-panels`)
 
 By default every panel that fits is placed (team decision, 15 Nov 2026: fill the roof). After seeing the money in step 08, you can try a smaller system: `--max-panels 30` keeps the 30 panels that produce most and writes a new hourly file. Then run steps 04 to 09 again with it.
+
+## Panel size and several roofs (added 15 Nov 2026)
+
+- **Your own panel size:** `--panel-wp 540 --panel-size 2.38x1.13` replaces the catalogue size of that wattage for the run (length x width in metres). `--portrait` puts the long side up the slope. The two built-in sizes (420 W, 1.76 x 1.13 m and 540 W, 2.28 x 1.13 m) are ASSUMPTIONS from typical catalogue panels. Use the datasheet of the panel really installed when you know it. The layout block rules count an area, so a bigger panel needs fewer cells per block.
+- **A host with panels on more than one building** (CEP9 is the Escola Pere IV and the Institut Quatre Cantons): run this step once per roof, then `python -m step03_simulate_generation.combine_roofs --roof red=data\pv\cep9_red_yield.json --roof yellow=data\pv\cep9_yellow_yield.json --out data\pv\cep9`. It adds panels, kWp and hourly solar for every layout and keeps a `roof` label on each panel.
+

@@ -1,108 +1,121 @@
 {
- "_about": "The real CEP9 system on the Institut Quatre Cantons roof. Totals from the CEP9 presentation; panel blocks traced by eye from the ICGC orthophoto (step 02's cep9_photo.png) on 15 Nov 2026, NOT checked against an installer drawing.",
- "name": "Actual (CEP9)",
- "panels": 108,
- "panel_wp": 540,
- "kwp": 58.32,
- "yearly_kwh": 73750,
- "source": "CEP9 presentation",
- "source_url": "https://elpoblenou.cat/wp-content/uploads/2024/10/presentacio-CEP9_v2.pptx.pdf",
- "panel_wp_note": "58.32 kWp / 108 panels = 540 W (our calculation)",
- "traced_by": "eye, from the ICGC orthophoto; light-coloured rows read as panels",
- "blocks": [
-  {
-   "name": "central west roof",
-   "corners": [
-    [
-     433154.5,
-     4584015.5
-    ],
-    [
-     433162.9,
-     4584010.2
-    ],
-    [
-     433158.5,
-     4584003.6
-    ],
-    [
-     433149.5,
-     4584008.2
-    ]
-   ]
-  },
-  {
-   "name": "central east roof",
-   "corners": [
-    [
-     433163.5,
-     4584008.2
-    ],
-    [
-     433168.2,
-     4584005.0
-    ],
-    [
-     433164.7,
-     4584000.4
-    ],
-    [
-     433160.0,
-     4584003.0
-    ]
-   ]
-  },
-  {
-   "name": "west roof",
-   "corners": [
-    [
-     433145.2,
-     4584005.2
-    ],
-    [
-     433149.1,
-     4584004.0
-    ],
-    [
-     433147.5,
-     4583998.8
-    ],
-    [
-     433143.0,
-     4584000.4
-    ]
-   ]
-  },
-  {
-   "name": "south-central roof",
-   "corners": [
-    [
-     433155.7,
-     4583998.4
-    ],
-    [
-     433163.1,
-     4583994.0
-    ],
-    [
-     433161.3,
-     4583990.0
-    ],
-    [
-     433152.3,
-     4583993.7
-    ]
-   ]
-  }
- ],
- "photo": {
-  "file": "cep9_roof_photo.jpg",
-  "bounds_25831": [
-   433139.5,
-   4583970.0,
-   433196.5,
-   4584040.0
+  "_about": "The real CEP9 system. It sits on TWO buildings: the Escola Pere IV (Carrer de Bilbao 103-117) and the Institut Quatre Cantons (Camí Antic de València 37-39), which are one community. Totals from the CEP9 presentation; panel counts per roof counted by Breno on a Google Earth image on 15 Nov 2026; the 4 blocks below were traced by eye from the ICGC orthophoto and it is NOT confirmed which of the two roofs they are on.",
+  "name": "Actual (CEP9)",
+  "panels": 108,
+  "panel_wp": 540,
+  "kwp": 58.32,
+  "yearly_kwh": 73750,
+  "source": "CEP9 presentation",
+  "source_url": "https://elpoblenou.cat/wp-content/uploads/2024/10/presentacio-CEP9_v2.pptx.pdf",
+  "panel_wp_note": "58.32 kWp / 108 panels = 540 W (our calculation)",
+  "traced_by": "eye, from the ICGC orthophoto; light-coloured rows read as panels",
+  "blocks": [
+    {
+      "name": "central west roof",
+      "corners": [
+        [
+          433154.5,
+          4584015.5
+        ],
+        [
+          433162.9,
+          4584010.2
+        ],
+        [
+          433158.5,
+          4584003.6
+        ],
+        [
+          433149.5,
+          4584008.2
+        ]
+      ]
+    },
+    {
+      "name": "central east roof",
+      "corners": [
+        [
+          433163.5,
+          4584008.2
+        ],
+        [
+          433168.2,
+          4584005.0
+        ],
+        [
+          433164.7,
+          4584000.4
+        ],
+        [
+          433160.0,
+          4584003.0
+        ]
+      ]
+    },
+    {
+      "name": "west roof",
+      "corners": [
+        [
+          433145.2,
+          4584005.2
+        ],
+        [
+          433149.1,
+          4584004.0
+        ],
+        [
+          433147.5,
+          4583998.8
+        ],
+        [
+          433143.0,
+          4584000.4
+        ]
+      ]
+    },
+    {
+      "name": "south-central roof",
+      "corners": [
+        [
+          433155.7,
+          4583998.4
+        ],
+        [
+          433163.1,
+          4583994.0
+        ],
+        [
+          433161.3,
+          4583990.0
+        ],
+        [
+          433152.3,
+          4583993.7
+        ]
+      ]
+    }
   ],
-  "source": "ICGC orthophoto (ortofoto_color_vigent), CC BY 4.0"
- }
+  "photo": {
+    "file": "cep9_roof_photo.jpg",
+    "bounds_25831": [
+      433139.5,
+      4583970.0,
+      433196.5,
+      4584040.0
+    ],
+    "source": "ICGC orthophoto (ortofoto_color_vigent), CC BY 4.0"
+  },
+  "by_roof": [
+    {
+      "roof": "Escola Pere IV (red)",
+      "panels": 43,
+      "note": "Breno's count of 40-43 on the Google Earth image"
+    },
+    {
+      "roof": "Institut Quatre Cantons (yellow)",
+      "panels": 65,
+      "note": "Breno's count on the Google Earth image"
+    }
+  ],
+  "by_roof_source": "Breno's count, Google Earth image, 15 Nov 2026 (43 + 65 = 108, the reported number)"
 }

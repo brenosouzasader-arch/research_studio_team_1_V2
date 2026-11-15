@@ -37,7 +37,7 @@ from shapely.ops import unary_union
 from step01_select_host.find_building import find_building
 from step02_pv_capacity.lidar_roof import read_roof_from_tiles
 from step02_pv_capacity.read_roof import lidar_only
-from step02_pv_capacity.layout import DEFAULT_MODULE, MODULES, Layout, get_module, lay_out_oriented
+from step02_pv_capacity.layout import DEFAULT_MODULE, MODULES, Layout, Module, get_module, lay_out_oriented
 
 from .energy import yield_for_layout
 from .horizon import horizons, surface_model
@@ -208,14 +208,27 @@ def options_png(fp, usable, items, path):
 
 def shade_yield(laz_dir, address=None, lat=None, lon=None, usable_path=None,
                 weather_path=DEFAULT_PATH, out="roof", max_shade_loss=MAX_SHADE_LOSS, max_panels=None,
-                panel_wp=420, layout_option="max", compare_wp=None, orient="building"):
+                panel_wp=420, layout_option="max", compare_wp=None, orient="building", panel_size=None, portrait=False):
     """Steps 3 + 4. panel_wp and layout_option pick the layout the main outputs use;
-    compare_wp lists the panel wattages to work the three options out for (default: panel_wp only)."""
+    compare_wp lists the panel wattages to work the three options out for (default: panel_wp only).
+    panel_size = (length_m, width_m) replaces the catalogue size of the panel_wp module for this run
+    (for example the size of the panel really installed); portrait=True puts the long side up the slope."""
     Path(out).parent.mkdir(parents=True, exist_ok=True)   # data\\pv does not exist on a fresh clone
     if layout_option not in {o["id"] for o in OPTIONS}:
         raise SystemExit(f"unknown layout {layout_option}; choose from {[o['id'] for o in OPTIONS]}")
-    module = get_module(panel_wp)
-    wps = sorted({module.wp, *[get_module(w).wp for w in (compare_wp or [])]})
+    modules = dict(MODULES)
+    if panel_size or portrait:
+        base = modules.get(int(panel_wp)) or Module(int(panel_wp), 2.28, 1.13, "")
+        long_m, short_m = panel_size if panel_size else (base.long_m, base.short_m)
+        if portrait:
+            long_m, short_m = short_m, long_m   # long side up the slope
+        modules[int(panel_wp)] = Module(int(panel_wp), long_m, short_m,
+                                        f"{int(panel_wp)} W, {max(long_m, short_m):.2f} x {min(long_m, short_m):.2f} m"
+                                        f"{', portrait' if portrait else ''} (custom size)")
+    elif int(panel_wp) not in modules:
+        get_module(panel_wp)   # stops with a clear message
+    module = modules[int(panel_wp)]
+    wps = sorted({module.wp, *[modules[int(w)].wp for w in (compare_wp or []) if int(w) in modules]})
     record, fp = find_building(address, lat, lon)
     lroof = read_roof_from_tiles(fp, laz_dir, refcat=record.refcat)
     if lroof is None:
@@ -235,7 +248,7 @@ def shade_yield(laz_dir, address=None, lat=None, lon=None, usable_path=None,
 
     variants, main, orient_table = [], None, None
     for wp in wps:
-        mod = MODULES[wp]
+        mod = modules[wp]
         full, kwh, loss, _, dropped, per_panel = analyse(
             lroof, fp, laz_dir, weather, record.lat, record.lon, usable, max_shade_loss, max_panels,
             module=mod, surface=surface if surface[0] is not None else None, orient=orient)
@@ -304,8 +317,12 @@ def main():
                     help="leave out panels losing more than this share of their sun (default 0.4; 1 keeps all)")
     ap.add_argument("--max-panels", type=int,
                     help="keep only this many panels, best first (default: every panel that fits)")
-    ap.add_argument("--panel-wp", type=int, default=420, choices=sorted(MODULES),
-                    help="panel model for the main outputs: 420 (default) or 540 W")
+    ap.add_argument("--panel-wp", type=int, default=420,
+                    help="panel watts for the main outputs: 420 (default) or 540 W, or any number with --panel-size")
+    ap.add_argument("--panel-size", help="panel length x width in metres, e.g. 2.38x1.13 (replaces the catalogue size "
+                                         "of --panel-wp for this run; use the size of the panel really installed)")
+    ap.add_argument("--portrait", action="store_true",
+                    help="long side of the panel up the slope instead of along the row")
     ap.add_argument("--layout", default="max", choices=[o["id"] for o in OPTIONS],
                     help="layout for the main outputs: max (fill the roof, default), neat or best")
     ap.add_argument("--compare-wp", default="420,540",
@@ -319,8 +336,16 @@ def main():
     if not args.address and (args.lat is None or args.lon is None):
         ap.error("give an address, or both --lat and --lon")
     compare = [int(w) for w in args.compare_wp.split(",") if w.strip()]
+    size = None
+    if args.panel_size:
+        try:
+            size = tuple(float(x) for x in args.panel_size.lower().replace(",", ".").split("x"))
+            assert len(size) == 2 and min(size) > 0.3
+        except (ValueError, AssertionError):
+            ap.error("--panel-size must look like 2.28x1.13 (metres)")
+        compare = [w for w in compare if w == args.panel_wp] or [args.panel_wp]
     result = shade_yield(args.laz_dir, args.address, args.lat, args.lon, args.usable, args.weather, args.out,
-                         args.max_shade, args.max_panels, args.panel_wp, args.layout, compare, args.orient)
+                         args.max_shade, args.max_panels, args.panel_wp, args.layout, compare, args.orient, size, args.portrait)
     print(json.dumps({k: result.get(k) for k in ("building", "yield", "usable_area_m2")}, indent=2))
     print("\nLayout options (choose with --panel-wp and --layout):")
     for v in result["variants"]:

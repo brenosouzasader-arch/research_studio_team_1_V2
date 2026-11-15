@@ -323,7 +323,7 @@
       $("monthly-chip").dataset.kind = v.actual ? "reported" : "modelled";
       $("monthly-chip").textContent = v.actual ? "reported total · our monthly shape" : "modelled · step 03";
       $("layout-rule").textContent = v.actual
-        ? `The system that is really on this roof: ${fmt(v.panels)} panels, ${fmt(v.kwp, 2)} kWp and about ${fmt(v.yearly_kwh)} kWh a year [${v.source}]. ${v.panel_wp_note}. The CEP9 source gives no monthly figures and no panel plan, so the months follow our model's shape and the panel blocks are traced from the roof photo.`
+        ? `The system that is really on the two roofs: ${fmt(v.panels)} panels, ${fmt(v.kwp, 2)} kWp and about ${fmt(v.yearly_kwh)} kWh a year [${v.source}]. ${v.panel_wp_note}. The CEP9 source gives no monthly figures and no panel plan, so the months follow our model's shape and the panel blocks are traced from the roof photo.` + (v.by_roof ? ` By roof: ${v.by_roof.map((r) => `${r.roof} ${r.panels} panels`).join(", ")} [${v.by_roof_source}].` : "")
         : `${v.name}: ${v.rule}.` + (v.blocks ? ` ${v.blocks} blocks.` : "");
       const st = $("layout-stats");
       st.replaceChildren();

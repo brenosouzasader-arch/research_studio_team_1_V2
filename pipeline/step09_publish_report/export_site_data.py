@@ -94,7 +94,7 @@ def actual_variant(a, variants):
             "model_panels_on_blocks": len(inside),
             "model_kwh_per_kwp": round(model_per_kwp) if model_per_kwp else None,
             "model_yearly_kwh": round(model_per_kwp * a["kwp"]) if model_per_kwp else None,
-            "photo": a.get("photo")}
+            "photo": a.get("photo"), "by_roof": a.get("by_roof"), "by_roof_source": a.get("by_roof_source")}
 
 
 def monthly_solar_days(times, gen):
