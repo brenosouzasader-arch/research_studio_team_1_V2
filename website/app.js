@@ -242,7 +242,8 @@
 
   function surplus(D) {
     const F = D.facts;
-    $("surplus-lede").textContent = `The host (a ${fmt(F.host_use_kwh.v)} kWh-a-year office) uses ${pct(F.host_self_share.v)} of the solar itself. The other ${fmt(F.surplus_kwh.v)} kWh a year is spare, and ${fmt(F.surplus_weekend_kwh.v)} kWh of it comes at weekends, when the office is closed.`;
+    const kind = D.meta.host_kind || "building", hl = D.meta.host_label || "The host";
+    $("surplus-lede").textContent = `${hl} (a ${kind} using about ${fmt(F.host_use_kwh.v)} kWh a year) uses ${pct(F.host_self_share.v)} of the solar itself. The other ${fmt(F.surplus_kwh.v)} kWh a year is spare, and ${fmt(F.surplus_weekend_kwh.v)} kWh of it comes at weekends, when the ${kind} is closed.`;
     const map = D.host.surplus_map;
     const host = $("heatmap");
     host.replaceChildren();
@@ -281,6 +282,8 @@
 
   const BCOL = ["--s1", "--s2", "--s3", "--s7"];
   function neighbours(D) {
+    $("nb-eyebrow").textContent = `Steps 05-07 · neighbours within ${fmt(D.max_distance_m)} m`;
+    $("nb-lede").textContent = D.meta.reach_note || `Guests are wired directly to the host, so the tool only looks within ${fmt(D.max_distance_m)} m and takes the closest buildings that can use some of the spare solar.`;
     const B = D.buildings;
     const colors = B.map((_, i) => css(BCOL[i] || "--ink-3"));
     let daytype = "weekday";
@@ -382,7 +385,7 @@
     const chosen = B.chosen_with_guests;
     $("battery-answer").textContent = chosen > 0
       ? `Yes: with the guests, a ${fmt(chosen)} kWh battery pays for itself.`
-      : `Not at today's prices. At an assumed €${fmt(F.lfp_price.v)} per kWh, no battery size pays for itself here. For the office alone, a 5 kWh LFP battery would only break even at about €${fmt(F.lfp5_break_even.v)} per kWh. With the two guests, almost all the solar is already used.`;
+      : `Not at today's prices. At an assumed €${fmt(F.lfp_price.v)} per kWh, no battery size pays for itself here. For the ${D.meta.host_kind || "host"} alone, a 5 kWh LFP battery would only break even at about €${fmt(F.lfp5_break_even.v)} per kWh. With ${D.buildings.length - 1} guests, ${pct(F.shared_used_share.v)} of the solar is already used without one.`;
     const sel = $("btype");
     for (const t of B.types) el("option", { value: t.id, text: t.label }, sel);
     function draw() {

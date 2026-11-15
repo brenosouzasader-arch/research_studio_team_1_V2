@@ -1,0 +1,5 @@
+building_id,name,lat,lon,use_type,floor_m2,dwellings,yearly_kwh,note
+maria_espinalt,Institut Maria Espinalt (position not checked),41.40458605,2.20067448,school,,,31980,"Camí Antic de València 82 [Sant Martí guide 2020]; Catastro has no outline; use ASSUMED equal to the host school"
+can_felipa,Can Felipa civic centre,41.40365338,2.20048124,office,9743,,,"Pl. Josep Maria Huertas Claveria 1; Catastro 3241702DF3834A, 1948.6 m2 x 5 floors; office profile ASSUMED"
+bombers_llevant,Llevant fire station (position not checked),41.40458605,2.20067448,shop,,,50000,"Castella 6 [Sant Martí guide 2020]; Catastro has no outline; 50,000 kWh/yr and shop day shape ASSUMED"
+homes_30,30 homes,41.40458605,2.20067448,home,2100,30,,"30 households [CEP9 presentation]; 70 m2 each ASSUMED; positions unknown"

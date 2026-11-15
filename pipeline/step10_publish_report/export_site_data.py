@@ -143,6 +143,7 @@ def main():
                     help="where the host's yearly use comes from (shown with the number)")
     ap.add_argument("--note", default="", help="a sentence for the banner at the top (e.g. what is assumed)")
     ap.add_argument("--max-distance", type=float, default=100, help="the reach used in step 07, metres")
+    ap.add_argument("--reach-note", default="", help="a sentence explaining the reach, shown in the neighbours section")
     ap.add_argument("--lat", type=float, required=True, help="host latitude (as given to step 07)")
     ap.add_argument("--lon", type=float, required=True, help="host longitude (as given to step 07)")
     ap.add_argument("--roof-yield", help="a different step 03 yield file for the roof section only "
@@ -265,7 +266,8 @@ def main():
     data = {
         "meta": {"case": args.label, "address": y["building"]["query"], "refcat": y["building"]["refcat"],
                  "generated": str(date.today()), "demo": bool(args.note), "note": args.note,
-                 "host_label": args.host_label, "host_kind": args.host_kind},
+                 "host_label": args.host_label, "host_kind": args.host_kind,
+                 "reach_note": args.reach_note},
         "facts": facts,
         "roof": {"address": ry["building"]["query"], "refcat": ry["building"]["refcat"],
                  "usable_m2": ry.get("usable_area_m2"), "separate": bool(args.roof_yield),
