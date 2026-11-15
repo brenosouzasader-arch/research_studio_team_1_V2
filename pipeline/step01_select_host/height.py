@@ -11,7 +11,7 @@ import laspy
 import numpy as np
 import shapely
 
-from .lidar import BUILDING_CLASS, find_tiles
+from .lidar import BUILDING_CLASS, class_mask, find_tiles
 
 GROUND_CLASS = 2          # ASPRS class for ground points
 RING_INNER, RING_OUTER = 2.0, 15.0
@@ -26,7 +26,7 @@ def _points(tiles, area, cls):
     for path in tiles:
         las = laspy.read(path)
         x, y, z = np.asarray(las.x), np.asarray(las.y), np.asarray(las.z)
-        keep = (np.asarray(las.classification) == cls)
+        keep = class_mask(las, (cls,), path)
         keep &= (x >= minx) & (x <= maxx) & (y >= miny) & (y <= maxy)
         x, y, z = x[keep], y[keep], z[keep]
         chunks.append(z[shapely.contains_xy(area, x, y)])

@@ -208,7 +208,7 @@ def roof_points(footprint, tiles, classes=ROOF_CLASSES):
     for path in tiles:
         las = laspy.read(path)
         x, y, z = np.asarray(las.x), np.asarray(las.y), np.asarray(las.z)
-        keep = np.isin(np.asarray(las.classification), classes)
+        keep = step1_lidar.class_mask(las, classes, path)
         keep &= (x >= minx) & (x <= maxx) & (y >= miny) & (y <= maxy)
         x, y, z = x[keep], y[keep], z[keep]
         inside = shapely.contains_xy(footprint, x, y)

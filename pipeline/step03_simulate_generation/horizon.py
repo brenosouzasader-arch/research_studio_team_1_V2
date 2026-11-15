@@ -12,6 +12,7 @@ of open sky, used for diffuse light, comes from the same horizon.
 import numpy as np
 
 from step01_select_host import lidar as step1_lidar
+from step01_select_host.lidar import class_mask
 from step02_pv_capacity.grid import Grid
 from step02_pv_capacity.lidar_roof import rasterise_max
 
@@ -33,7 +34,7 @@ def surface_points(area, tiles, classes=SURFACE_CLASSES):
     for path in tiles:
         las = laspy.read(path)
         x, y, z = np.asarray(las.x), np.asarray(las.y), np.asarray(las.z)
-        keep = np.isin(np.asarray(las.classification), classes)
+        keep = class_mask(las, classes, path)
         keep &= (x >= minx) & (x <= maxx) & (y >= miny) & (y <= maxy)
         chunks.append(np.column_stack([x[keep], y[keep], z[keep]]))
     return np.vstack(chunks) if chunks else np.empty((0, 3))

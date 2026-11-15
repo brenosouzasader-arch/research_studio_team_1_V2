@@ -17,6 +17,28 @@ GRID_SIZE = 0.5           # metres per cell when rasterising the roof
 FLAT_SLOPE_DEG = 5.0      # a cell counts as flat below this slope
 FLAT_SHARE_NEEDED = 0.7   # roof counts as flat if this share of cells is flat
 MIN_POINTS = 50
+UNCLASSIFIED = 1          # ASPRS class for points nobody classified
+_warned = set()
+
+
+def class_mask(las, classes, path=None):
+    """True for points in `classes`.
+
+    Some ICGC Territorial LiDAR sheets (3rd coverage) have no building class at
+    all: roofs are left as class 1, "unclassified". Sheet 433584 in Poblenou is
+    one (checked 15 Nov 2026: 0 class-6 points, the school roof is class 1 at
+    about 14 m). If a sheet has no class-6 point, we treat its class-1 points as
+    building, so half a roof is not lost at a sheet edge.
+    """
+    c = np.asarray(las.classification)
+    classes = tuple(classes)
+    if BUILDING_CLASS in classes and not (c == BUILDING_CLASS).any():
+        classes += (UNCLASSIFIED,)
+        name = getattr(path, "name", path)
+        if name not in _warned:
+            _warned.add(name)
+            print(f"note: {name} has no building class; using its unclassified points as building")
+    return np.isin(c, classes)
 
 
 def tile_bounds(path):
@@ -44,7 +66,7 @@ def roof_points(footprint, tiles):
     for path in tiles:
         las = laspy.read(path)
         x, y, z = np.asarray(las.x), np.asarray(las.y), np.asarray(las.z)
-        keep = (np.asarray(las.classification) == BUILDING_CLASS)
+        keep = class_mask(las, (BUILDING_CLASS,), path)
         keep &= (x >= minx) & (x <= maxx) & (y >= miny) & (y <= maxy)
         x, y, z = x[keep], y[keep], z[keep]
         inside = shapely.contains_xy(footprint, x, y)

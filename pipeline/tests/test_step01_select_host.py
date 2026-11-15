@@ -175,3 +175,31 @@ def test_find_building_end_to_end_offline(tmp_path, monkeypatch):
     assert record.heritage_protected is None
     find_building.save_geojson(record, fp, tmp_path / "b.geojson")
     assert json.loads((tmp_path / "b.geojson").read_text())["features"][0]["properties"]["refcat"]
+
+
+def test_sheet_without_building_class_uses_unclassified(tmp_path):
+    """A roof split over two sheets, one of which (like ICGC 433584) has no class 6."""
+    x, y = _roof_grid()
+    z = np.full_like(x, 25.0)
+    south = y < Y0 + 7.5
+    _write_las(tmp_path / "a_classified.laz", x[south], y[south], z[south], lidar.BUILDING_CLASS)
+    _write_las(tmp_path / "b_unclassified.laz", x[~south], y[~south], z[~south], lidar.UNCLASSIFIED)
+    fp = box(X0, Y0, X0 + 20, Y0 + 15)
+    pts = lidar.roof_points(fp, lidar.find_tiles(fp, tmp_path))
+    assert len(pts) == len(x)  # both halves of the roof are read
+
+
+def test_unclassified_points_ignored_when_sheet_has_buildings(tmp_path):
+    x, y = _roof_grid()
+    z = np.full_like(x, 25.0)
+    cls = np.where(y < Y0 + 7.5, lidar.BUILDING_CLASS, lidar.UNCLASSIFIED).astype(np.uint8)
+    header = laspy.LasHeader(point_format=3, version="1.4")
+    header.offsets = [x.min(), y.min(), z.min()]
+    header.scales = [0.01, 0.01, 0.01]
+    las = laspy.LasData(header)
+    las.x, las.y, las.z = x, y, z
+    las.classification = cls
+    las.write(tmp_path / "mixed.laz")
+    fp = box(X0, Y0, X0 + 20, Y0 + 15)
+    pts = lidar.roof_points(fp, lidar.find_tiles(fp, tmp_path))
+    assert len(pts) == int((cls == lidar.BUILDING_CLASS).sum())
