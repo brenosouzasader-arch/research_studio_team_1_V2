@@ -224,7 +224,7 @@ def test_combine_roofs_adds_two_roofs(tmp_path):
         (tmp_path / f"{name}_hourly.csv").write_text((tmp_path / f"{name}_hourly_420_neat.csv").read_text())
         v = {"panel_wp": 420, "panel": "420 W", "option": "neat", "name": "Neat", "rule": "r", "blocks": 1, "panels": 10,
              "kwp": 4.2, "tilt_deg": 10, "azimuth_deg": 135, "yearly_kwh": 1000, "kwh_per_kwp": 238, "mean_shade_loss": 0.1,
-             "monthly_kwh": [10] * 12, "peak_hour_kw": kwh, "hourly_file": f"{name}_hourly_420_neat.csv",
+             "monthly_kwh": [10] * 12, "peak_hour_kw": kwh, "hourly_file": f"data\\pv\\{name}_hourly_420_neat.csv",
              "panel_list": [{"x": 1, "y": 2, "kwh_year": 100, "corners": []}]}
         y = {"building": {"refcat": name, "address": name, "query": name},
              "yield": {"panels": 10, "kwp": 4.2, "tilt_deg": 10, "azimuth_deg": 135, "yearly_kwh": 1000, "kwh_per_kwp": 238,

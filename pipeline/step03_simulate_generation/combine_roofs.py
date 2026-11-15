@@ -30,6 +30,15 @@ def _write(path, times, kwh):
     Path(path).write_text("time_utc,kwh\n" + "".join(f"{t},{round(float(v), 4)}\n" for t, v in zip(times, kwh)))
 
 
+def _find(yield_json, hourly_file):
+    """Step 03 stores the hourly file as it was given on the command line (e.g. data\\pv\\x.csv), so
+    try that path first, then the file name next to the yield json."""
+    for c in (Path(hourly_file), Path(yield_json).parent / Path(str(hourly_file).replace("\\", "/")).name):
+        if c.exists():
+            return c
+    raise SystemExit(f"Hourly file {hourly_file} not found next to {yield_json}")
+
+
 def _sum_hourly(files, out):
     times, total = None, None
     for f in files:
@@ -59,7 +68,7 @@ def combine(roofs, out):
                 parts.append((n, p, m[0]))
         if len(parts) != len(loaded):
             continue   # a layout that one of the roofs does not have cannot be added
-        hourly = _sum_hourly([p.parent / v["hourly_file"] for n, p, v in parts],
+        hourly = _sum_hourly([_find(p, v["hourly_file"]) for n, p, v in parts],
                              out.parent / f"{out.name}_hourly_{key[0]}_{key[1]}.csv")
         panels = sum(v["panels"] for *_, v in parts)
         kwp = round(sum(v["kwp"] for *_, v in parts), 2)
@@ -97,8 +106,8 @@ def combine(roofs, out):
     }
     out.parent.mkdir(parents=True, exist_ok=True)
     Path(f"{out}_yield.json").write_text(json.dumps(result, indent=2, default=str))
-    _sum_hourly([p.parent / next(v for v in y["variants"] if (v["panel_wp"], v["option"]) ==
-                                 (main["panel_wp"], main["option"]))["hourly_file"] for n, p, y in loaded],
+    _sum_hourly([_find(p, next(v for v in y["variants"] if (v["panel_wp"], v["option"]) ==
+                               (main["panel_wp"], main["option"]))["hourly_file"]) for n, p, y in loaded],
                 f"{out}_hourly.csv")
     return result
 
