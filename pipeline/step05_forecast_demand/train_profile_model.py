@@ -109,12 +109,12 @@ def daily_and_shape(hourly):
     day = h.groupby(h.index.date).sum()
     daily = pd.DataFrame({"kwh_day": day.values}, index=pd.to_datetime(list(day.index)))
     daily["month"] = daily.index.month
-    daily["weekend"] = (daily.index.dayofweek >= 5).astype(int)
+    daily["weekend"] = (daily.index.day_of_week >= 5).astype(int)
     total = h.groupby(h.index.date).transform("sum")
     keep = total > 0
     share = (h[keep] / total[keep])
     hours = pd.DataFrame({"share": share.values, "hour": share.index.hour,
-                          "month": share.index.month, "weekend": (share.index.dayofweek >= 5).astype(int)})
+                          "month": share.index.month, "weekend": (share.index.day_of_week >= 5).astype(int)})
     return daily, hours
 
 
@@ -135,7 +135,9 @@ def collect(metadata_csv, series_dir, max_series=None, seed=0):
         hh = meta[meta.btype == "household"].sample(max(0, max_series - len(rest)), random_state=seed)
         meta = pd.concat([rest, hh])
     dailies, shapes = [], []
-    for _, row in meta.iterrows():
+    for n, (_, row) in enumerate(meta.iterrows(), 1):
+        if n % 200 == 0:
+            print(f"  read {n} of {len(meta)} series", flush=True)
         sid = str(row[c_id])
         try:
             d, s = daily_and_shape(read_series(files[sid]))
