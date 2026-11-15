@@ -1,15 +1,48 @@
 {
   "name": "Poblenou / 22@ around the Quatre Cantons school",
   "why": "A real energy community (CEP9) already shares this school roof's output with 30 homes and 4 public buildings, so we can check our numbers against real ones. 22@ offices nearby are weekend-closed hosts.",
-  "center": {"lat": 41.4015, "lon": 2.1975, "note": "APPROXIMATE centre of the zone; check on a map"},
-  "postal_codes": ["08005", "08018"],
+  "center": {
+    "lat": 41.4015,
+    "lon": 2.1975,
+    "note": "APPROXIMATE centre of the zone; check on a map"
+  },
+  "postal_codes": [
+    "08005",
+    "08018"
+  ],
   "max_distance_m": 100,
   "hosts": [
-    {"name": "Institut Quatre Cantons (school roof, CEP9)", "address": "CHECK: exact address of Institut Quatre Cantons, Barcelona", "kind": "school",
-     "real_numbers": {"kwp": 58.32, "panels": 108, "yearly_kwh": 73750, "households": 30,
-                      "source": "https://elpoblenou.cat/wp-content/uploads/2024/10/presentacio-CEP9_v2.pptx.pdf"}},
-    {"name": "MediaTIC", "address": "Carrer de Roc Boronat 117, Barcelona", "kind": "office"}
+    {
+      "name": "Institut Quatre Cantons (school roof, CEP9)",
+      "address": "Camí Antic de València 35-39, Barcelona",
+      "kind": "school",
+      "real_numbers": {
+        "kwp": 58.32,
+        "panels": 108,
+        "yearly_kwh": 73750,
+        "households": 30,
+        "source": "https://elpoblenou.cat/wp-content/uploads/2024/10/presentacio-CEP9_v2.pptx.pdf",
+        "self_use_share": 0.3,
+        "self_use_source": "https://www.pressreader.com/usa/the-guardian-usa/20220725/281711208390346"
+      },
+      "address_source": "https://guia.barcelona.cat/en/detall/institut-quatre-cantons_99400264732.html (listed as 'Camí Antic de València, 35*39')",
+      "lat": 41.40462557967737,
+      "lon": 2.200693579080881,
+      "coords_note": "Route-planner point from the same city guide page; step 01 geocodes the address and uses Catastro, so this is only for picking LiDAR sheets"
+    },
+    {
+      "name": "MediaTIC",
+      "address": "Carrer de Roc Boronat 117, Barcelona",
+      "kind": "office"
+    }
   ],
-  "lidar_sheets": "CHECK: ICGC LiDAR sheets covering this zone (we only have Eixample sheets 430582 and 430583)",
-  "status": "candidate"
+  "lidar_sheets": {
+    "needed": [
+      "433583",
+      "433584"
+    ],
+    "how": "ICGC 1 km sheets named by UTM 31N km: x 433, y 4583 and 4584. The school sits about 16 m south of the y = 4,584 km line, and step 03 looks 150 m out for shade, so both sheets are needed. EPSG:25831 x 433190, y 4583984 (converted from the lat/lon above)."
+  },
+  "status": "selected: main real test case (Breno, 15 Nov 2026)",
+  "legal_mode_note": "CEP9 runs under RD 244/2019 (500 m). Run step 07 twice: default 100 m and --legal-mode."
 }

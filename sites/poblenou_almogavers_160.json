@@ -1,0 +1,62 @@
+{
+  "name": "Almogàvers 160 office (A160), Poblenou",
+  "why": "Second real test case from Sindhuja's repo. The real roof already has PV of unknown size; here we ASSUME the roof is empty so steps 01-03 can be tested on a big office roof.",
+  "center": {
+    "lat": 41.399077786613745,
+    "lon": 2.1932134113514765,
+    "note": "From A160 footprint in SindhujaDavuluri-IAAC/rooftops_repowered_v2 config/a160_assessments.json"
+  },
+  "postal_codes": [
+    "08018"
+  ],
+  "max_distance_m": 100,
+  "hosts": [
+    {
+      "name": "Oficines Almogàvers 160",
+      "address": "Carrer dels Almogàvers 160, Barcelona",
+      "kind": "office",
+      "cadastral_reference": "2635601DF3823F",
+      "source": "https://github.com/SindhujaDavuluri-IAAC/rooftops_repowered_v2/blob/main/config/a160_assessments.json",
+      "compare_with": {
+        "note": "Teammate's LiDAR layout, low confidence, 420 Wp, tilt 10, PVGIS SARAH3 2017, 14% loss",
+        "kwp": {
+          "conservative": 95.34,
+          "base": 110.88,
+          "optimistic": 116.76
+        },
+        "yearly_kwh": {
+          "conservative": 133391,
+          "base": 155133,
+          "optimistic": 163359
+        },
+        "source": "https://github.com/SindhujaDavuluri-IAAC/rooftops_repowered_v2/blob/main/reports/pvgis/A160/hypothetical_acquisition.json"
+      },
+      "ASSUMPTION": "Roof treated as empty. In reality PV is visible on the 2025 orthophoto, size unknown."
+    }
+  ],
+  "guests_to_check": [
+    {
+      "name": "Institut ITAEB",
+      "address": "Carrer dels Almogàvers 131, Barcelona",
+      "kind": "school"
+    },
+    {
+      "name": "Municipal social-rent housing (18 homes)",
+      "address": "Carrer de la Ciutat de Granada 95-97, Barcelona",
+      "kind": "residential"
+    },
+    {
+      "name": "NH Barcelona Diagonal Poblenou (129 rooms)",
+      "address": "Carrer d'Àlaba 94-96, Barcelona",
+      "kind": "hotel"
+    }
+  ],
+  "guests_source": "https://github.com/SindhujaDavuluri-IAAC/rooftops_repowered_v2/blob/main/datasets/inputs/case_study_candidates.csv",
+  "lidar_sheets": {
+    "needed": [
+      "432583"
+    ],
+    "how": "EPSG:25831 x 432559, y 4583374; 150 m shade reach stays inside this one sheet."
+  },
+  "status": "second real test case"
+}
