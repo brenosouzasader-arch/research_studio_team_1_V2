@@ -47,7 +47,10 @@ No source was found for an installed price of a 20-500 kWh building battery in E
 
 | Source | What it backs up |
 |---|---|
-| [CEP9 Poblenou energy community presentation](https://elpoblenou.cat/wp-content/uploads/2024/10/presentacio-CEP9_v2.pptx.pdf) | Quatre Cantons school roof: 58.32 kWp, 108 panels, about 73,750 kWh/yr. It is shared with 2 schools, Can Felipa, the Llevant fire station and 30 homes (400-700 kWh/yr each, saving €120-140). The city studied 13 roofs and built 1. |
+| [CEP9 Poblenou energy community presentation](https://elpoblenou.cat/wp-content/uploads/2024/10/presentacio-CEP9_v2.pptx.pdf) | Quatre Cantons school roof: 58.32 kWp, 108 panels, about 73,750 kWh/yr. It is shared with Institut Quatre Cantons, Institut Maria Espinalt, Can Felipa, the Llevant fire station and 30 homes (400-700 kWh/yr each, saving €120-140), within a 2 km radius, energy given for free. The city studied 13 roofs and built 1. |
+| **[Consums Energètics Edificis 2008-2018]** [Ajuntament de Barcelona, energy use of municipal buildings (Feb 2020)](https://bcnroc.ajuntament.barcelona.cat/jspui/bitstream/11703/129947/3/Consums%20Energ%c3%a8tics%20Edificis%202008-2018.pdf.txt) | Measured 2018 electricity by building type. Our averages (total ÷ buildings): institut 6,631,491 kWh / 61 = about 108,700 kWh; school (CEIP) 10,463,055 / 128 = about 81,700; civic centre and similar 16,419,643 / 193 = about 85,100; fire station 1,382,535 / 8 = about 172,800. Used as CEP9 members' yearly use. No floor areas, so no kWh/m². |
+| [Sant Martí services guide, Dec 2020](https://bcnroc.ajuntament.barcelona.cat/jspui/bitstream/11703/117042/6/Guia_Equipaments_SantMart%c3%ad_barris_2020-12.pdf.txt) | Addresses: Institut Maria Espinalt, Camí Antic de València 82; Parc de Bombers de Llevant, Castella 6. |
+| [Barcelona Cultura: Centre Cívic Can Felipa](https://barcelona.cat/barcelonacultura/en/detail/centre-civic-can-felipa_92086035490) | Can Felipa address, Plaça de Josep Maria Huertas Claveria 1. |
 | [The Guardian, 25 Jul 2022 (via PressReader)](https://www.pressreader.com/usa/the-guardian-usa/20220725/281711208390346) | The Quatre Cantons school keeps about 30% of its roof's output and the community gets the rest. The city paid about €94,000. Evidence that schools have surplus. |
 | [UPC SIRENA global report 2025](https://sostenible.upc.edu/ca/reptes/documents-pla-2030/informe-sirena-global-2025.pdf) | Campus Diagonal Nord teaching buildings (Aularis) have 170 + 80.18 kWp with 50% self-consumption. UPC's PV is 2.17% of its total use. SIRENA data is published only as yearly reports. |
 | [Acciona: SelvaMar business campus](https://www.acciona.com) (as cited in the team's test-site research) | 852 panels, 315.24 kWp, covering 18% of the office building's use. Evidence that big offices use all their own solar. Exact page to be linked. |
@@ -79,6 +82,8 @@ No source was found for an installed price of a 20-500 kWh building battery in E
 |---|---|---|
 | Panel models: 420 W at 1.76 x 1.13 m (default) and 540 W at 2.28 x 1.13 m | typical catalogue panels; 540 W chosen because CEP9 = 58.32 kWp / 108 panels = 540 W each [CEP9 presentation] | `step02_pv_capacity/layout.py` (`MODULES`) |
 | Layout options "neat blocks" and "best blocks" | rectangles of 6+ / 8+ panels, 3+ / 4+ per row, panels at least 85% / 93% of the roof's 90th-percentile panel; chosen to look like real rooftop systems | `step03_simulate_generation/options.py` (`OPTIONS`) |
+| CEP9 shares in our model | school 30% [The Guardian], 30 homes x 550 kWh (middle of 400-700 [CEP9]) = 23%, the other three members split the rest equally | `website/README.md` (step 08 `agreed_shares.py --shares`) |
+| Electricity taxes on a kWh | electricity tax 5.11% then VAT 21% (rates have changed over time) | `step08_share_energy/agreed_shares.py` (`TAX_FACTOR`) |
 | LFP installed price | €500 per kWh | `step06_prices_and_battery/battery_types.py` (`LFP_CAPEX_EUR_PER_KWH`) |
 | Sodium-ion round trip, cycle life, calendar life | 85%, 3,000, 12 years | `battery_types.py` |
 | Second-life EV round trip, cycle life, price | 80%, 2,000, 50% of new | `battery_types.py` |

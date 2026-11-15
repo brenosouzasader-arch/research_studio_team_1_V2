@@ -143,6 +143,7 @@ def main():
                     help="where the host's yearly use comes from (shown with the number)")
     ap.add_argument("--note", default="", help="a sentence for the banner at the top (e.g. what is assumed)")
     ap.add_argument("--max-distance", type=float, default=100, help="the reach used in step 07, metres")
+    ap.add_argument("--compare-note", default="", help="a sentence comparing the fixed-shares result with reality")
     ap.add_argument("--reach-note", default="", help="a sentence explaining the reach, shown in the neighbours section")
     ap.add_argument("--lat", type=float, required=True, help="host latitude (as given to step 07)")
     ap.add_argument("--lon", type=float, required=True, help="host longitude (as given to step 07)")
@@ -166,6 +167,8 @@ def main():
     others = read_demand(d / "neighbours" / n / "demand_hourly.csv")
     cands = json.loads((d / "neighbours" / n / "candidate_buildings.geojson").read_text(encoding="utf-8"))
 
+    agreed_path = d / "agreed" / n / "agreed_shares_summary.json"
+    agreed = json.loads(agreed_path.read_text(encoding="utf-8")) if agreed_path.exists() else None
     times, gen = host["times"], host["generation_kwh"]
     ids = ["host"] + list(others)
     demand = np.vstack([host["host_demand_kwh"]] + [others[i] for i in others])
@@ -297,6 +300,8 @@ def main():
         "money": {"slider": slider, "capex": capex, "om": om, "default_discount": share["guest_discount"],
                   "rows": inv},
         "sources": read_sources(args.sources),
+        "agreed": agreed,
+        "compare_note": args.compare_note,
     }
     out = Path(args.out)
     out.parent.mkdir(parents=True, exist_ok=True)

@@ -148,3 +148,17 @@ def test_battery_investment_rows_and_guest_slider():
     r = res["with_battery"]
     assert inv.owner_total_at_discount(r, 0.10) == pytest.approx(r["owner_total_eur"], abs=1)
     assert inv.owner_total_at_discount(r, 0.30) < inv.owner_total_at_discount(r, 0.10)
+
+
+def test_agreed_shares_fixed_and_free():
+    import numpy as np
+    from step08_share_energy import agreed_shares as ag
+    gen = np.array([0.0, 10.0, 10.0])
+    demands = np.array([[0, 2, 10], [0, 10, 0], [0, 10, 10]])
+    shares = ag.parse_shares("host=0.5", ["host", "a", "b"])
+    assert np.allclose(shares, [0.5, 0.25, 0.25])
+    res = ag.run(gen, ["host", "a", "b"], demands, shares, np.ones(3), guest_price=0.0)
+    assert res["used_kwh"] + res["to_grid_kwh"] == 20
+    assert res["per_building"]["host"]["used_kwh"] == 7        # 2 + 5
+    assert res["per_building"]["a"]["to_grid_kwh"] == 2        # its share in hour 3 isn't needed
+    assert res["per_building"]["a"]["saving_eur"] == 2         # free: saves its used kWh x price

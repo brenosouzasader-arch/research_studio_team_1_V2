@@ -510,6 +510,32 @@
     draw();
   }
 
+  function agreed(D) {
+    const A = D.agreed;
+    if (!A) return;
+    $("agreed-card").hidden = false;
+    const ours = D.sharing.typical.without.per_building || {};
+    $("agreed-intro").textContent = `Our tool: every hour the agent sends the solar where it is needed, and guests pay the grid price minus ${pct(D.money.default_discount)}. CEP9: each member gets a fixed share of every hour's output, for free${A.per_building.host ? `, and the school keeps ${pct(A.per_building.host.share)}` : ""}. A share a member can't use that hour goes to the grid. Typical-year PVPC, without taxes.`;
+    const t = $("agreed-table");
+    t.replaceChildren();
+    const hr = el("tr", {}, el("thead", {}, t));
+    for (const h of ["Building", "Our tool: kWh from roof", "Our tool: saves €/yr", "CEP9: share", "CEP9: kWh used", "CEP9: saves €/yr"]) el("th", { text: h }, hr);
+    const tb = el("tbody", {}, t);
+    const label = (id) => (D.buildings.find((b) => b.id === id) || { label: id }).label;
+    for (const [id, r] of Object.entries(A.per_building)) {
+      const o = ours[id] || {};
+      const tr = el("tr", {}, tb);
+      el("td", { text: label(id) + (r.dwellings ? ` (per home: ${fmt(r.per_dwelling_used_kwh)} kWh, €${fmt(r.per_dwelling_saving_eur)}; €${fmt(r.per_dwelling_saving_with_taxes_eur)} with taxes)` : "") }, tr);
+      el("td", { class: "n", text: fmt(o.from_roof_kwh) }, tr);
+      el("td", { class: "n", text: fmt(o.saving_eur) }, tr);
+      el("td", { class: "n", text: pct(r.share) }, tr);
+      el("td", { class: "n", text: fmt(r.used_kwh) }, tr);
+      el("td", { class: "n", text: fmt(r.saving_eur) }, tr);
+    }
+    const tot = D.sharing.typical.without;
+    $("agreed-note").textContent = `Solar used: our tool ${pct(tot.used_share)}, CEP9 terms ${pct(A.used_share)} (${fmt(A.to_grid_kwh)} kWh a year goes to the grid because a share isn't always needed). ` + (D.compare_note || "");
+  }
+
   function sources(D) {
     const host = $("sources-body");
     for (const s of D.sources) {
@@ -539,7 +565,7 @@
   }
 
   function start(D) {
-    for (const fn of [overview, roof, surplus, neighbours, prices, battery, money, sources]) {
+    for (const fn of [overview, roof, surplus, neighbours, prices, battery, money, agreed, sources]) {
       try { fn(D); } catch (err) { console.error(fn.name, err); }
     }
     trackSteps();
