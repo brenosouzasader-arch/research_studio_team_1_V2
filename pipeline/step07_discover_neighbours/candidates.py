@@ -16,7 +16,7 @@ Two ways to get the candidates:
 - Catastro (default): every plot whose centre is within --max-distance of the host. For each plot:
   dwellings, floors, footprint and use from Catastro, then step 05's baseline profile.
 - --candidates-csv: a list you made yourself (e.g. other UPC buildings with SIRENA data).
-  Columns: building_id, lat, lon, use_type (home/office/school/shop), and either
+  Columns: building_id, lat, lon, use_type (home/office/school/shop), optional name, and either
   yearly_kwh, or floor_m2 (+ dwellings for homes), or metered (path to a meter CSV).
 
 Each candidate gets a fit score: how many kWh of the host's surplus (step 04) its predicted
@@ -141,7 +141,7 @@ def write_outputs(out_dir, times, scored, best, demand):
     feats = []
     for r in scored:
         geom = r.get("geometry")
-        props = {k: r.get(k) for k in ("building_id", "use_type", "distance_m", "eligible_status", "dwellings",
+        props = {k: r.get(k) for k in ("building_id", "name", "use_type", "distance_m", "eligible_status", "dwellings",
                                        "yearly_kwh", "fit_kwh", "demand_source")}
         if geom is not None:
             from shapely.geometry import mapping

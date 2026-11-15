@@ -193,14 +193,20 @@
         s.appendChild(chip({ kind: "modelled", src: "step 03", note: "ICGC LiDAR + PVGIS typical year" }));
       }
       // monthly bars
+      // one y-axis for every layout, so switching layouts compares like with like
       const m = v.monthly_kwh || D.roof.monthly_kwh;
       const f = frame($("monthly"), 560, 240, { l: 48, r: 8, t: 22, b: 26 });
-      const max = niceMax(Math.max(...m));
+      const max = niceMax(Math.max(...V.flatMap((x) => x.monthly_kwh || m)));
+      const full = (V.find((x) => x.option === "max" && x.panel_wp === v.panel_wp) || {}).monthly_kwh;
       yAxis(f, max, 4, (x) => fmt(x), "kWh");
       const bw = f.iw / 12;
       m.forEach((val, i) => {
         const h = (val / max) * f.ih;
         const x = f.m.l + i * bw + 3;
+        if (full && v.option !== "max") {   // faint outline: what filling the roof would give
+          const fh = (full[i] / max) * f.ih;
+          el("rect", { x, y: f.m.t + f.ih - fh, width: bw - 6, height: fh, rx: 3, fill: "none", stroke: css("--solar"), "stroke-dasharray": "3 3", "stroke-width": 1 }, f.svg);
+        }
         const r = el("rect", { x, y: f.m.t + f.ih - h, width: bw - 6, height: h, rx: 3, fill: css("--solar"), tabindex: 0 }, f.svg);
         el("text", { x: x + (bw - 6) / 2, y: f.h - 8, "text-anchor": "middle", text: MONTHS[i] }, f.svg);
         const show = (evt) => showTip(evt, MONTHS[i], [{ value: fmt(val) + " kWh", label: "solar", color: css("--solar") }]);

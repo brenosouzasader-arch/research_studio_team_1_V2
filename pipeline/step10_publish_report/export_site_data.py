@@ -1,6 +1,6 @@
 """Step 10: collect the results of steps 03-09 into one file for the website.
 
-    python -m step10_publish_report.export_site_data --name demo --yield examples\\bruc59_yield.json
+    python -m step10_publish_report.export_site_data --name cep9 --yield data\\pv\\cep9_yield.json --label "..." --lat .. --lon ..
 
 It reads the output folders that the earlier steps wrote (data\\host\\<name>,
 data\\prices, data\\battery\\<name>, data\\neighbours\\<name>, data\\sharing\\<name>,
@@ -134,13 +134,17 @@ def read_sources(path):
 
 def main():
     ap = argparse.ArgumentParser(description="Step 10: one data file for the website")
-    ap.add_argument("--name", default="demo", help="the folder name used in data\\<step>\\<name>")
-    ap.add_argument("--yield", dest="yield_json", default="examples/bruc59_yield.json",
-                    help="step 03's <name>_yield.json")
-    ap.add_argument("--label", default="Demo: made-up 300 m² office under the Bruc 59 example roof",
-                    help="what the website calls this case")
-    ap.add_argument("--lat", type=float, default=41.3935, help="host latitude (as given to step 07)")
-    ap.add_argument("--lon", type=float, default=2.1689, help="host longitude (as given to step 07)")
+    ap.add_argument("--name", required=True, help="the folder name used in data\\<step>\\<name>")
+    ap.add_argument("--yield", dest="yield_json", required=True, help="step 03's <name>_yield.json")
+    ap.add_argument("--label", required=True, help="what the website calls this case")
+    ap.add_argument("--host-label", default="Host", help="the host's name on the site, e.g. 'Institut Quatre Cantons'")
+    ap.add_argument("--host-kind", default="office", help="office, school or shop (as given to step 04)")
+    ap.add_argument("--host-use-note", default="step 05 profile from floor area and use type; replace with meter data",
+                    help="where the host's yearly use comes from (shown with the number)")
+    ap.add_argument("--note", default="", help="a sentence for the banner at the top (e.g. what is assumed)")
+    ap.add_argument("--max-distance", type=float, default=100, help="the reach used in step 07, metres")
+    ap.add_argument("--lat", type=float, required=True, help="host latitude (as given to step 07)")
+    ap.add_argument("--lon", type=float, required=True, help="host longitude (as given to step 07)")
     ap.add_argument("--roof-yield", help="a different step 03 yield file for the roof section only "
                     "(e.g. a real roof whose later steps haven't run yet); default: --yield")
     ap.add_argument("--sources", default="../docs/SOURCES.md")
@@ -168,13 +172,13 @@ def main():
     typ = share["price_years"]["typical"]
 
     # buildings
-    buildings = [{"id": "host", "label": "Host (office)", "kind": "office", "distance_m": 0,
+    buildings = [{"id": "host", "label": f"{args.host_label} (host)", "kind": args.host_kind, "distance_m": 0,
                   "yearly_kwh": hs["host_demand_kwh"], "source": hs["demand_source"],
                   "profile": profiles(times, host["host_demand_kwh"])}]
     for f in cands["features"]:
         p = f["properties"]
         if p["building_id"] in others:
-            buildings.append({"id": p["building_id"], "label": p["building_id"].replace("_", " "),
+            buildings.append({"id": p["building_id"], "label": p.get("name") or p["building_id"].replace("_", " "),
                               "kind": p["use_type"], "distance_m": p["distance_m"], "yearly_kwh": p["yearly_kwh"],
                               "fit_kwh": p["fit_kwh"], "source": p["demand_source"],
                               "profile": profiles(times, others[p["building_id"]])})
@@ -232,7 +236,7 @@ def main():
         "kwh_per_kwp": fact(yl["kwh_per_kwp"], "modelled", "step 03", "kWh/kWp"),
         "usable_m2": fact(y.get("usable_area_m2"), "modelled", "step 02", "m²", "ICGC LiDAR"),
         "host_use_kwh": fact(hs["host_demand_kwh"], "assumption", "step 05", "kWh/yr",
-                             "made-up 300 m² office at 120 kWh/m² a year; replace with meter data"),
+                             args.host_use_note),
         "host_self_share": fact(hs["self_consumption_ratio"], "modelled", "step 04"),
         "surplus_kwh": fact(hs["surplus_kwh"], "modelled", "step 04", "kWh/yr"),
         "surplus_weekend_kwh": fact(hs["surplus_weekend_kwh"], "modelled", "step 04", "kWh/yr"),
@@ -260,8 +264,8 @@ def main():
 
     data = {
         "meta": {"case": args.label, "address": y["building"]["query"], "refcat": y["building"]["refcat"],
-                 "generated": str(date.today()), "demo": True,
-                 "note": "The roof is real (Carrer del Bruc 59, read from LiDAR). The office using it and the neighbours are made up, to test the tool until we have a real host with meter data."},
+                 "generated": str(date.today()), "demo": bool(args.note), "note": args.note,
+                 "host_label": args.host_label, "host_kind": args.host_kind},
         "facts": facts,
         "roof": {"address": ry["building"]["query"], "refcat": ry["building"]["refcat"],
                  "usable_m2": ry.get("usable_area_m2"), "separate": bool(args.roof_yield),
@@ -275,7 +279,7 @@ def main():
                  "first_day": str(times[0].astype("datetime64[D]"))},
         "buildings": buildings,
         "candidates": candidates,
-        "max_distance_m": 100,
+        "max_distance_m": args.max_distance,
         "host_latlon": [args.lat, args.lon],
         "prices": {"by_local_hour": {k: v["pvpc_by_local_hour"] for k, v in psum.items()},
                    "summary": {k: {kk: vv for kk, vv in v.items() if kk != "pvpc_by_local_hour"} for k, v in psum.items()},
