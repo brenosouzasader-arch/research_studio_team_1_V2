@@ -45,3 +45,21 @@ Madrid was asked for by name. Its data is monthly, so it helps the daily and sea
 4. **Ask for meters** of the actual guests (Datadis with their consent; CEP9 members through the energy community).
 
 The questions for the team are in the pipeline README ("Open questions").
+
+## Result of the first training run (15 Nov 2026, 2,960 GoiEner supply points)
+
+Run on Breno's laptop; tables are saved in `examples/demand_model/` (`daily_averages.csv`, `hourly_shape.csv`, `report.json`).
+
+- **Model vs plain averages**, on 592 customers never seen in training: 27.05 vs 46.37 kWh a day (office 12.5 vs 26.3, education 35.1 vs 65.6, households 4.8 vs 5.9). Most of the gain comes from the model knowing contracted power, which our buildings do not have, so it is **not wired in**; only the two tables are.
+- **Our rule-of-thumb shapes vs the real ones** (weekday, share of the day's use):
+
+| Type | 10:00-16:00, our rule | 10:00-16:00, real | Night 0:00-6:00, our rule | Night, real |
+|---|---|---|---|---|
+| Office | 50% | 32-38% | 7% | 15-19% |
+| School (education) | 47-56% | 32-40% | 7-12% | 13-20% |
+| Shop (retail) | 44% | 33-37% | 9% | 14-17% |
+| Home | 27% | 26-27% | 15% | 20-26% |
+
+  So the real buildings use less in the middle of the day and more at night than we assumed. Weekend use is about 40-55% of a weekday for schools, offices and shops (median kWh per day), more than our rule gives. Caution: GoiEner's non-household supply points are mostly small businesses, so a big school may be less flat than these shapes.
+- **Switch:** set `DEMAND_MODEL_DIR=examples/demand_model` (PowerShell: `$env:DEMAND_MODEL_DIR="examples/demand_model"`) and `profile_shapes` uses these tables (`learned_shapes()` in `baseline_profiles.py`) for every guest and for a proxy host. Default is still our rule.
+- **Effect on CEP9** (guests only; the host's own use is read from step 04's file): wired, 98.6% -> 99.9% of the solar used; legal, 93.9% -> 96.9%. Money moves by under 2% for the owner. The conclusion that the four members absorb almost all of the roof does not depend on which shapes we use.

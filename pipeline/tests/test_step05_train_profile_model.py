@@ -50,3 +50,15 @@ def test_missing_column_message(tmp_path):
     pd.DataFrame({"a": [1]}).to_csv(tmp_path / "metadata.csv", index=False)
     with pytest.raises(SystemExit, match="No 'id' column"):
         tp.collect(tmp_path / "metadata.csv", tmp_path)
+
+
+def test_learned_shapes_follow_the_data(meters, tmp_path):
+    from step05_forecast_demand import baseline_profiles as bp
+    tp.run(meters / "metadata.csv", meters, tmp_path / "m")
+    t = np.arange(np.datetime64("2021-01-01T00:00"), np.datetime64("2022-01-01T00:00"), np.timedelta64(1, "h"))
+    sh = bp.profile_shapes(t, profile_path=None, model_dir=tmp_path / "m")
+    assert set(sh) == {"home", "shop", "office", "school"}
+    assert abs(sh["office"].sum() - 1) < 1e-9 and (sh["office"] >= 0).all()
+    hour, wd, _ = bp.local_hours(t)
+    assert sh["office"][(hour == 12) & (wd < 5)].mean() > 3 * sh["office"][(hour == 3) & (wd < 5)].mean()
+    assert sh["office"][wd < 5].mean() > sh["office"][wd >= 5].mean()

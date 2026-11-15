@@ -16,6 +16,7 @@ consumption by postal code on Open Data BCN (consum-electricitat-bcn), or a
 model trained on Datadis meter data from buildings that agree to share it.
 """
 import json
+import os
 from dataclasses import asdict, dataclass
 from pathlib import Path
 
@@ -159,8 +160,14 @@ def hourly_shapes(times_utc, profile_path=PROFILE_PATH):
     return home / home.sum(), shop / shop.sum()
 
 
-def profile_shapes(times_utc, profile_path=PROFILE_PATH):
-    """8760-hour shapes that each sum to 1, for home, shop, office and school."""
+def profile_shapes(times_utc, profile_path=PROFILE_PATH, model_dir=None):
+    """8760-hour shapes that each sum to 1, for home, shop, office and school.
+
+    With model_dir (or the environment variable DEMAND_MODEL_DIR) the shapes come from the
+    GoiEner-trained tables (learned_shapes); otherwise from our rules of thumb."""
+    model_dir = model_dir or os.environ.get("DEMAND_MODEL_DIR")
+    if model_dir:
+        return learned_shapes(times_utc, model_dir)
     home, shop = hourly_shapes(times_utc, profile_path)
     hour, weekday, month = local_hours(times_utc)
     t = np.asarray(times_utc, dtype="datetime64[D]")
@@ -171,6 +178,45 @@ def profile_shapes(times_utc, profile_path=PROFILE_PATH):
     holidays = (month == 7) | (month == 8) | ((month == 12) & (day_of_month >= 23)) | ((month == 1) & (day_of_month <= 7))
     school = np.where(workday & ~holidays & (hour >= SCHOOL_OPEN[0]) & (hour < SCHOOL_OPEN[1]), 1.0, SCHOOL_CLOSED_SHARE)
     return {"home": home, "shop": shop, "office": office / office.sum(), "school": school / school.sum()}
+
+
+# GoiEner types behind our four kinds (ASSUMPTION: the closest match by activity code)
+LEARNED_TYPE = {"home": "household", "shop": "retail", "office": "office", "school": "education"}
+
+
+def learned_shapes(times_utc, model_dir):
+    """8760-hour shapes (each sums to 1) from real Spanish meters instead of our rules.
+
+    model_dir holds train_profile_model.py's tables: hourly_shape.csv (share of a day's use in
+    each hour, by type, season and weekday/weekend) and daily_averages.csv (kWh per day by type,
+    month and weekday/weekend). Hour of day gives the shape inside a day; the daily average
+    gives the level of that day, so weekends, summers and school holidays follow the data.
+    Source: GoiEner smart meters, 2,960 Spanish supply points [Scientific Data 2024]."""
+    import pandas as pd
+    model_dir = Path(model_dir)
+    hs = pd.read_csv(model_dir / "hourly_shape.csv")
+    da = pd.read_csv(model_dir / "daily_averages.csv")
+    hour, weekday, month = local_hours(times_utc)
+    season_of = np.array(["autumn", "winter", "winter", "spring", "spring", "spring",
+                          "summer", "summer", "summer", "autumn", "autumn", "winter"])[month - 1]
+    weekend = (weekday >= 5).astype(int)
+    out = {}
+    for kind, btype in LEARNED_TYPE.items():
+        share = np.zeros(len(hour))
+        level = np.ones(len(hour))
+        hsb = hs[hs.btype == btype].set_index(["season", "weekend", "hour"]).share
+        dab = da[da.btype == btype].set_index(["month", "weekend"]).kwh_day_mean
+        for sea in ("winter", "spring", "summer", "autumn"):
+            for wk in (0, 1):
+                for hr in range(24):
+                    share[(season_of == sea) & (weekend == wk) & (hour == hr)] = hsb.get((sea, wk, hr), 1 / 24)
+        for mo in range(1, 13):
+            for wk in (0, 1):
+                level[(month == mo) & (weekend == wk)] = dab.get((mo, wk), np.nan)
+        level = np.where(np.isnan(level), np.nanmean(level), level)
+        v = share * level
+        out[kind] = v / v.sum()
+    return out
 
 
 def hourly_demand(building, shapes):
