@@ -6,5 +6,7 @@ laspy[lazrs]
 numpy
 scipy
 pillow
-scikit-learn      # step 06 price model
+scikit-learn      # step 06 price model, step 05 demand model
+joblib            # saves the step 05 model
+pandas            # step 05 demand model
 pytest
