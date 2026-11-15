@@ -711,7 +711,7 @@
       const items = [
         ["Owner's value a year", "€" + fmt(owner), "modelled", "host savings + sales + export"],
         ["Neighbours save a year", "€" + fmt(guests), "modelled", "all guests together"],
-        ["Panels installed", "€" + fmt(capex), "assumption", "€1,400 per kWp"],
+        ["Panels installed", "€" + fmt(capex), "assumption", "€1,061 per kWp, Marblanc Solar quotes"],
         ["Simple payback", net > 0 ? fmt(capex / net, 1) + " years" : "never", "modelled", "after €" + fmt(om) + " upkeep a year"],
       ];
       for (const [label, value, kind, src] of items) {
