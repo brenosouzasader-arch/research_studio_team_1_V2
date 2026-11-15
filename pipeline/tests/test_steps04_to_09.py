@@ -1,4 +1,4 @@
-"""Offline tests for the V2 steps 04-08, with the Bruc 59 example roof as the solar input."""
+"""Offline tests for the V2 steps 04, 07, 08 and 09, with the Bruc 59 example roof as the solar input."""
 import json
 from pathlib import Path
 
@@ -6,9 +6,9 @@ import numpy as np
 import pytest
 
 from step04_read_host_demand import host_table
-from step06_discover_neighbours import candidates as nb
-from step07_optimize_allocation import allocation as al
-from step08_compare_investment import investment as inv
+from step07_discover_neighbours import candidates as nb
+from step08_share_energy import allocation as al
+from step09_compare_investment import investment as inv
 
 EXAMPLE = Path(__file__).resolve().parent.parent / "examples" / "bruc59_hourly.csv"
 
@@ -115,3 +115,36 @@ def test_meter_weekdays_stay_weekdays_when_moved_to_the_solar_year():
     moved, _ = host_table.align_to_year(t, np.datetime64("2023-01-01T00:00"))
     day = moved.astype("datetime64[D]")[0]
     assert str(day).startswith("2023-01") and (day.astype(int) + 3) % 7 == 0   # 0 = Monday
+
+
+def test_neighbours_closest_first_within_100_m_and_legal_mode(host):
+    t = host_table.read_host_table(host)
+    cands = [{"building_id": "at_90m", "lat": 41.3940, "lon": 2.1680, "use_type": "shop", "floor_m2": 400},
+             {"building_id": "at_15m", "lat": 41.3936, "lon": 2.1690, "use_type": "home", "floor_m2": 1700, "dwellings": 20},
+             {"building_id": "at_160m", "lat": 41.3925, "lon": 2.1675, "use_type": "school", "floor_m2": 2000}]
+    _, best, _ = nb.shortlist(t, cands, (41.3935, 2.1689))
+    assert [r["building_id"] for r in best] == ["at_15m", "at_90m"]          # 100 m, closest first
+    _, best, _ = nb.shortlist(t, cands, (41.3935, 2.1689), max_distance=nb.LEGAL_MAX_DISTANCE_M,
+                              margin=nb.LEGAL_MARGIN_M, rank="fit")
+    assert len(best) == 3 and best[0]["fit_kwh"] >= best[-1]["fit_kwh"]       # legal mode: 450 m, best fit first
+
+
+def test_battery_investment_rows_and_guest_slider():
+    from step06_prices_and_battery import battery_types as bt
+    from step06_prices_and_battery import dispatch
+    gen = np.tile(np.r_[np.zeros(8), np.full(8, 50.0), np.zeros(8)], 2)
+    demand = np.vstack([np.full(48, 10.0), np.full(48, 5.0)])
+    price, spot = np.full(48, 0.15), np.full(48, 0.05)
+    res = {}
+    for label, kwh in (("with_battery", 10.0), ("without_battery", 0.0)):
+        b = {**bt.get("lfp"), "kwh": kwh}
+        f = dispatch.simulate_year(gen, demand, price, spot, b)
+        res[label] = dispatch.account(f, gen, demand, price, spot, 0.10, ["host", "g"], b)
+    sharing = {"battery_type": "lfp", "battery_kwh": 10.0, "price_years": {"typical": res}}
+    rows = inv.evaluate_battery(sharing, kwp=10)
+    assert {r["scenario"] for r in rows} == {"direct_no_battery", "direct_with_battery"}
+    w = next(r for r in rows if r["scenario"] == "direct_with_battery" and r["case"] == "central")
+    assert w["capex_eur"] == 10 * 1400 + 10 * 500
+    r = res["with_battery"]
+    assert inv.owner_total_at_discount(r, 0.10) == pytest.approx(r["owner_total_eur"], abs=1)
+    assert inv.owner_total_at_discount(r, 0.30) < inv.owner_total_at_discount(r, 0.10)

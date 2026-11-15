@@ -64,3 +64,7 @@ To rank several candidate hosts: make `roofs.csv` with a column `address` (optio
 - Trees are solid in winter too (LiDAR is captured with leaves on).
 - Panels on a roof the LiDAR misses (new buildings since 2023) are not shaded correctly.
 - No snow, no soiling seasons, no inverter clipping.
+
+## Fewer panels (`--max-panels`)
+
+By default every panel that fits is placed (team decision, 15 Nov 2026: fill the roof). After seeing the money in step 09, you can try a smaller system: `--max-panels 30` keeps the 30 panels that produce most and writes a new hourly file. Then run steps 04 to 09 again with it.

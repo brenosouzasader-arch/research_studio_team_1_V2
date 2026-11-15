@@ -1,4 +1,4 @@
-# All steps (no AI library needed yet)
+# All steps
 requests
 shapely>=2.0
 pyproj
@@ -6,4 +6,5 @@ laspy[lazrs]
 numpy
 scipy
 pillow
+scikit-learn      # step 06 price model
 pytest

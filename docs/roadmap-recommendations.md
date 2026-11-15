@@ -1,6 +1,6 @@
 # Recommendations on the Track 2 roadmap
 
-13 November 2026. The roadmap is clear, and the repository follows its 9 steps and file names. These are the changes we would make, most important first.
+13 November 2026. The roadmap is clear, and the repository follows its 9 steps and file names. (Since 15 Nov 2026 there are 10 steps: a prices and battery step was added as step 06, so the roadmap's steps 06-09 are now 07-10.) These are the changes we would make, most important first.
 
 ## 1. Settle the geography this week (the roadmap and the test-site research disagree)
 

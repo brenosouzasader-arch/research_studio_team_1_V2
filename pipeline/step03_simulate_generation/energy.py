@@ -37,10 +37,11 @@ def panel_output(poa, temp):
     return poa / 1000.0 * PANEL_WP / 1000.0 * heat * (1 - SYSTEM_LOSSES)
 
 
-def yield_for_layout(layout, horizon, weather, lat, lon, max_shade_loss=None):
+def yield_for_layout(layout, horizon, weather, lat, lon, max_shade_loss=None, max_panels=None):
     """Returns per-panel yearly kWh, per-panel shade loss (0-1), the roof's hourly kWh and
     which panels are kept. Panels losing more than max_shade_loss of their sun are left
-    out of the hourly total (None keeps them all)."""
+    out of the hourly total (None keeps them all). max_panels keeps only that many of the
+    remaining panels, the best-producing first (to try a smaller system in step 09)."""
     elev, az = sun_position(weather.times, lat, lon)
     n = horizon.shape[0]
     svf = sky_view(horizon)
@@ -50,4 +51,9 @@ def yield_for_layout(layout, horizon, weather, lat, lon, max_shade_loss=None):
     kwh = panel_output(poa, weather.temp)
     shade_loss = 1 - poa.sum(axis=1) / np.maximum(open_poa.sum(axis=1), 1e-9)
     keep = np.ones(n, bool) if max_shade_loss is None else shade_loss <= max_shade_loss
+    yearly = kwh.sum(axis=1)
+    if max_panels is not None and keep.sum() > max_panels:
+        ranked = [i for i in np.argsort(-yearly) if keep[i]]
+        keep = np.zeros(n, bool)
+        keep[ranked[:max_panels]] = True
     return kwh.sum(axis=1), shade_loss, kwh[keep].sum(axis=0), keep

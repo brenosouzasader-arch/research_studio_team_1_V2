@@ -21,8 +21,8 @@ Source: V1 repository, `main` as of 6 Nov 2026 (the pipeline is the same in Bren
 
 | V1 idea | V2 place |
 |---|---|
-| `step5/sharing.py`: own use first, then share the surplus; greedy "who takes the most" | `step04_read_host_demand/host_table.py` and `step06_discover_neighbours/candidates.py` |
-| `step5/communities.py`: fixed beta by sunny-hour use; prices and costs | `step07_optimize_allocation/allocation.py` (`fixed`) and `step08_compare_investment/investment.py` |
+| `step5/sharing.py`: own use first, then share the surplus; greedy "who takes the most" | `step04_read_host_demand/host_table.py` and `step07_discover_neighbours/candidates.py` |
+| `step5/communities.py`: fixed beta by sunny-hour use; prices and costs | `step08_share_energy/allocation.py` (`fixed`) and `step09_compare_investment/investment.py` |
 | Research prototypes (matchmaker, fair shares, community size) | `prototypes/` as reference |
 
 ## Left out (still in V1)
@@ -33,5 +33,5 @@ Source: V1 repository, `main` as of 6 Nov 2026 (the pipeline is the same in Bren
 | `step4/roof_test_set.py` (Eixample 9-block numbering) | Tied to the old study area |
 | `step4/energy_map.py`, EPW notes | City energy map benchmark; Eixample-only, optional |
 | `step5/communities.py` (co-investment) | The business model changed: the owner now keeps the panels |
-| `web/` and `website/` (3D map) | Comes back in step 09 when we build the new view |
-| `website_matchsol/` | Hourly-matching web prototype; its logic is now in steps 06-07 |
+| `web/` and `website/` (3D map) | Comes back in step 10 when we build the new view |
+| `website_matchsol/` | Hourly-matching web prototype; its logic is now in steps 07-08 |

@@ -2,7 +2,7 @@
 
 **Roadmap:** input = address / parcel ID, building use, roof / ownership information → output = resolved footprint, coordinates, roof ID, cadastral attributes.
 
-Carried over unchanged from V1's step 1. `parcels.py` is new here: every cadastral plot around a point (moved out of V1's Eixample roof list so step 06 can use it anywhere).
+Carried over unchanged from V1's step 1. `parcels.py` is new here: every cadastral plot around a point (moved out of V1's Eixample roof list so step 07 can use it anywhere).
 
 
 The first step of the rooftop solar pipeline. The input is an address, or a point tapped on a map. The output is one record per building:

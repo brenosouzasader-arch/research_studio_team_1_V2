@@ -1,7 +1,7 @@
 """Every cadastral plot in a square around a point, from Catastro's INSPIRE parcels service.
 
 Taken from V1's roof_test_set.py (which then grouped the plots into the 9 Eixample blocks).
-Here it is kept general so any test site works. Used by step 06 to find nearby buildings.
+Here it is kept general so any test site works. Used by step 07 to find nearby buildings.
 """
 import xml.etree.ElementTree as ET
 

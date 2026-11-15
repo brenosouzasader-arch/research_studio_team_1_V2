@@ -10,7 +10,11 @@ Writes <out>_yield.json (totals, monthly kWh, every panel), <out>_hourly.csv
 (8760 hours of AC kWh for the whole roof, for step 5 and energy sharing),
 <out>_panels.geojson (panel outlines, EPSG:25831) and <out>_panels.png. Without
 --usable it also writes <out>_usable.geojson (the usable roof it found).
-The hourly CSV is what step 6 (surplus map) reads.
+The hourly CSV is what step 04 (host table) reads.
+
+Panels: by default every panel that fits (team decision: fill the roof). To try a smaller
+system after seeing the money in step 09, run again with --max-panels N; the N panels that
+produce most are kept.
 """
 import argparse
 import csv
@@ -71,7 +75,8 @@ def usable_geojson(usable):
               "properties": {"usable_area_m2": round(usable.area, 1)}}]}
 
 
-def analyse(lroof, footprint, laz_dir, weather, lat, lon, usable=None, max_shade_loss=MAX_SHADE_LOSS):
+def analyse(lroof, footprint, laz_dir, weather, lat, lon, usable=None, max_shade_loss=MAX_SHADE_LOSS,
+            max_panels=None):
     """Steps 3 + 4 for one roof. Returns (kept layout, yearly kWh per kept panel,
     shade loss per kept panel, hourly kWh of the kept panels, dropped panels)."""
     if usable is None:
@@ -82,7 +87,8 @@ def analyse(lroof, footprint, laz_dir, weather, lat, lon, usable=None, max_shade
     grid, dsm = surface_model(footprint, laz_dir)
     centres = layout.centres()
     horizon = horizons(grid, dsm, centres[:, 0], centres[:, 1], panel_heights(lroof, centres))
-    kwh, loss, hourly, keep = yield_for_layout(layout, horizon, weather, lat, lon, max_shade_loss)
+    kwh, loss, hourly, keep = yield_for_layout(layout, horizon, weather, lat, lon, max_shade_loss,
+                                              max_panels)
     dropped = [p for p, k in zip(layout.panels, keep) if not k]
     kept = Layout([p for p, k in zip(layout.panels, keep) if k], layout.azimuth_deg, layout.tilt_deg)
     return kept, kwh[keep], loss[keep], hourly, dropped
@@ -137,7 +143,7 @@ def panels_png(footprint, usable, layout, kwh, path, dropped=(), px_per_m=10):
 
 
 def shade_yield(laz_dir, address=None, lat=None, lon=None, usable_path=None,
-                weather_path=DEFAULT_PATH, out="roof", max_shade_loss=MAX_SHADE_LOSS):
+                weather_path=DEFAULT_PATH, out="roof", max_shade_loss=MAX_SHADE_LOSS, max_panels=None):
     record, fp = find_building(address, lat, lon)
     lroof = read_roof_from_tiles(fp, laz_dir, refcat=record.refcat)
     if lroof is None:
@@ -147,7 +153,7 @@ def shade_yield(laz_dir, address=None, lat=None, lon=None, usable_path=None,
     weather = load_tmy(weather_path)
     usable = load_usable(usable_path) if usable_path else lroof.grid.cells_to_polygon(lroof.usable)
     layout, kwh, loss, hourly, dropped = analyse(lroof, fp, laz_dir, weather, record.lat, record.lon,
-                                                 usable, max_shade_loss)
+                                                 usable, max_shade_loss, max_panels)
 
     usable_fc = usable_geojson(usable)
     if usable_path:
@@ -193,12 +199,14 @@ def main():
     ap.add_argument("--weather", default=str(DEFAULT_PATH), help="PVGIS typical year (python -m step03_simulate_generation.weather)")
     ap.add_argument("--max-shade", type=float, default=MAX_SHADE_LOSS,
                     help="leave out panels losing more than this share of their sun (default 0.4; 1 keeps all)")
+    ap.add_argument("--max-panels", type=int,
+                    help="keep only this many panels, best first (default: every panel that fits)")
     ap.add_argument("--out", default="roof", help="output name, without extension")
     args = ap.parse_args()
     if not args.address and (args.lat is None or args.lon is None):
         ap.error("give an address, or both --lat and --lon")
     result = shade_yield(args.laz_dir, args.address, args.lat, args.lon, args.usable, args.weather, args.out,
-                         args.max_shade)
+                         args.max_shade, args.max_panels)
     print(json.dumps({k: result.get(k) for k in ("building", "yield", "usable_area_m2")}, indent=2))
 
 

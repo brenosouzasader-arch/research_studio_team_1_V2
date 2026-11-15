@@ -1,28 +1,35 @@
-"""Step 06: discover nearby buildings that could join, and shortlist the 3-5 that fit best.
+"""Step 07: discover nearby buildings that could join, and shortlist the closest 3-5 that fit.
 
-    python -m step06_discover_neighbours.candidates --host-dir data\\host\\nexus2 ^
+    python -m step07_discover_neighbours.candidates --host-dir data\\host\\nexus2 ^
         --host "Carrer de Jordi Girona 29, Barcelona" --out data\\neighbours\\nexus2
-    python -m step06_discover_neighbours.candidates --host-dir data\\host\\demo ^
+    python -m step07_discover_neighbours.candidates --host-dir data\\host\\demo ^
         --candidates-csv my_candidates.csv --out data\\neighbours\\demo
 
+DISTANCE (team decision, 15 Nov 2026): the default tool ignores the Spanish sharing law so it
+works in other cities too. Guests are wired directly to the host's panels and battery, so
+they must be close: within --max-distance (default 100 m), CLOSEST FIRST (shorter cables,
+less loss, easier agreement). --legal-mode switches back to the Spanish collective
+self-consumption rule instead: 500 m between meters (RD 244/2019), minus a 50 m safety
+margin because we only know plot centres, ranked by fit.
+
 Two ways to get the candidates:
-- Catastro (default): every plot whose centre is within --max-distance of the host, minus a
-  safety margin (the law measures between meters; we only know plot centres). For each plot:
+- Catastro (default): every plot whose centre is within --max-distance of the host. For each plot:
   dwellings, floors, footprint and use from Catastro, then step 05's baseline profile.
 - --candidates-csv: a list you made yourself (e.g. other UPC buildings with SIRENA data).
   Columns: building_id, lat, lon, use_type (home/office/school/shop), and either
   yearly_kwh, or floor_m2 (+ dwellings for homes), or metered (path to a meter CSV).
 
 Each candidate gets a fit score: how many kWh of the host's surplus (step 04) its predicted
-use could take up over the year, hour by hour. The --shortlist best are kept.
+use could take up over the year, hour by hour. Buildings with no fit are dropped; of the rest,
+the --shortlist closest are kept (or the best fits, in legal mode).
 
 Outputs in --out:
 - candidate_buildings.geojson  every candidate: building_id, use_type, geometry, distance_m,
                                eligible_status, dwellings, yearly_kwh, fit_kwh, demand_source
 - demand_hourly.csv            the shortlisted buildings' hourly use (same columns as step 04)
-- shortlist.csv                the shortlist, best fit first
+- shortlist.csv                the shortlist, closest first (best fit first in legal mode)
 
-eligible_status is always "tentative": distance is the only rule checked. Connection,
+eligible_status is always "tentative": distance is the only rule checked. A direct cable,
 metering and the signed agreement need a professional check (see the roadmap's guardrails).
 Participation: only a share of the flats in a building will sign up (--join-rate, ASSUMPTION 40%).
 """
@@ -37,8 +44,10 @@ import numpy as np
 from step04_read_host_demand.host_table import read_host_table, read_metered
 from step05_forecast_demand import baseline_profiles as dm
 
-MAX_DISTANCE_M = 500.0      # RD 244/2019 strictest rule (5 km now allowed for solar up to 5 MW, RDL 7/2026)
-DISTANCE_MARGIN_M = 50.0
+MAX_DISTANCE_M = 100.0      # team decision 15 Nov 2026: direct wiring, about 100 m
+DISTANCE_MARGIN_M = 0.0
+LEGAL_MAX_DISTANCE_M = 500.0   # RD 244/2019 strictest rule (5 km now allowed for solar up to 5 MW, RDL 7/2026)
+LEGAL_MARGIN_M = 50.0          # the law measures between meters; we only know plot centres
 SHORTLIST = 5
 JOIN_RATE = 0.4             # ASSUMPTION: share of a building's flats that sign up
 
@@ -102,11 +111,11 @@ def from_catastro(host_lat, host_lon, max_distance, cache_path):
 
 
 def shortlist(host, candidates, host_latlon, max_distance=MAX_DISTANCE_M, n=SHORTLIST, join_rate=JOIN_RATE,
-              exclude=()):
+              exclude=(), margin=DISTANCE_MARGIN_M, rank="distance"):
     """Score every candidate within reach; return (all rows, shortlisted rows, {id: hourly demand})."""
     times, surplus = host["times"], host["surplus_kwh"]
     shapes = dm.profile_shapes(times)
-    reach = max_distance - DISTANCE_MARGIN_M
+    reach = max_distance - margin
     scored, demand = [], {}
     for row in candidates:
         if row["building_id"] in exclude:
@@ -118,7 +127,10 @@ def shortlist(host, candidates, host_latlon, max_distance=MAX_DISTANCE_M, n=SHOR
                        "yearly_kwh": round(float(use.sum())), "fit_kwh": round(fit_kwh(surplus, use)),
                        "demand_source": source})
         demand[row["building_id"]] = use
-    scored.sort(key=lambda r: -r["fit_kwh"])
+    if rank == "distance":
+        scored.sort(key=lambda r: (r["distance_m"], -r["fit_kwh"]))   # closest first
+    else:
+        scored.sort(key=lambda r: -r["fit_kwh"])                       # best fit first
     best = [r for r in scored if r["eligible_status"].startswith("tentative") and r["fit_kwh"] > 0][:n]
     return scored, best, {r["building_id"]: demand[r["building_id"]] for r in best}
 
@@ -164,13 +176,15 @@ def read_demand(path):
 
 
 def main():
-    ap = argparse.ArgumentParser(description="Step 06: nearby candidate buildings, shortlisted by fit")
+    ap = argparse.ArgumentParser(description="Step 07: nearby candidate buildings, shortlisted by fit")
     ap.add_argument("--host-dir", required=True, help="step 04's output folder for the host")
     ap.add_argument("--host", help="host address (for its position and to leave it out)")
     ap.add_argument("--lat", type=float)
     ap.add_argument("--lon", type=float)
     ap.add_argument("--candidates-csv", help="your own candidate list instead of Catastro")
-    ap.add_argument("--max-distance", type=float, default=MAX_DISTANCE_M)
+    ap.add_argument("--max-distance", type=float, help="metres (default 100, or 500 with --legal-mode)")
+    ap.add_argument("--legal-mode", action="store_true",
+                    help="Spanish shared self-consumption rules: 500 m, 50 m margin, best fit first")
     ap.add_argument("--shortlist", type=int, default=SHORTLIST)
     ap.add_argument("--join-rate", type=float, default=JOIN_RATE)
     ap.add_argument("--out", default="data/neighbours")
@@ -182,6 +196,9 @@ def main():
         args.lat, args.lon, host_id = record.lat, record.lon, record.refcat
     if args.lat is None or args.lon is None:
         ap.error("give --host, or --lat and --lon")
+    margin, rank = (LEGAL_MARGIN_M, "fit") if args.legal_mode else (DISTANCE_MARGIN_M, "distance")
+    if args.max_distance is None:
+        args.max_distance = LEGAL_MAX_DISTANCE_M if args.legal_mode else MAX_DISTANCE_M
     host = read_host_table(args.host_dir)
     if args.candidates_csv:
         with open(args.candidates_csv, newline="", encoding="utf-8-sig") as f:
@@ -190,7 +207,7 @@ def main():
         Path(args.out).mkdir(parents=True, exist_ok=True)
         candidates = from_catastro(args.lat, args.lon, args.max_distance, Path(args.out) / "catastro_cache.json")
     scored, best, demand = shortlist(host, candidates, (args.lat, args.lon), args.max_distance, args.shortlist,
-                                     args.join_rate, exclude={host_id} if host_id else ())
+                                     args.join_rate, exclude={host_id} if host_id else (), margin=margin, rank=rank)
     write_outputs(args.out, host["times"], scored, best, demand)
     print(f"{len(scored)} candidates, {len(best)} shortlisted -> {args.out}")
     for r in best:
