@@ -141,12 +141,15 @@ def main():
                     help="what the website calls this case")
     ap.add_argument("--lat", type=float, default=41.3935, help="host latitude (as given to step 07)")
     ap.add_argument("--lon", type=float, default=2.1689, help="host longitude (as given to step 07)")
+    ap.add_argument("--roof-yield", help="a different step 03 yield file for the roof section only "
+                    "(e.g. a real roof whose later steps haven't run yet); default: --yield")
     ap.add_argument("--sources", default="../docs/SOURCES.md")
     ap.add_argument("--out", default="../website/data/site_data.json")
     args = ap.parse_args()
     n = args.name
     d = Path("data")
     y = json.loads(Path(args.yield_json).read_text(encoding="utf-8"))
+    ry = json.loads(Path(args.roof_yield).read_text(encoding="utf-8")) if args.roof_yield else y
     host = read_host_table(d / "host" / n)
     hs = json.loads((d / "host" / n / "host_summary.json").read_text(encoding="utf-8"))
     sy = read_solar_year_prices(d / "prices" / "prices_hourly_solar_year.csv")
@@ -260,12 +263,14 @@ def main():
                  "generated": str(date.today()), "demo": True,
                  "note": "The roof is real (Carrer del Bruc 59, read from LiDAR). The office using it and the neighbours are made up, to test the tool until we have a real host with meter data."},
         "facts": facts,
-        "roof": {"monthly_kwh": yl["monthly_kwh"], "tilt_deg": yl["tilt_deg"], "azimuth_deg": yl["azimuth_deg"],
+        "roof": {"address": ry["building"]["query"], "refcat": ry["building"]["refcat"],
+                 "usable_m2": ry.get("usable_area_m2"), "separate": bool(args.roof_yield),
+                 "monthly_kwh": yl["monthly_kwh"], "tilt_deg": yl["tilt_deg"], "azimuth_deg": yl["azimuth_deg"],
                  "mean_shade_loss": yl["mean_shade_loss"], "panels_left_out": yl["panels_left_out"],
                  "solar_day_by_month": monthly_solar_days(times, gen),
                  "panels": [{"x": p["x"], "y": p["y"], "kwh": p["kwh_year"]} for p in y["panels"]],
-                 "variants": layout_variants(y),
-                 "chosen": {"panel_wp": yl.get("panel_wp", 420), "option": yl.get("layout", "max")}},
+                 "variants": layout_variants(ry),
+                 "chosen": {"panel_wp": ry["yield"].get("panel_wp", 420), "option": ry["yield"].get("layout", "max")}},
         "host": {"surplus_by_month_kwh": hs["surplus_by_month_kwh"], "surplus_map": smap,
                  "first_day": str(times[0].astype("datetime64[D]"))},
         "buildings": buildings,

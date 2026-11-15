@@ -129,7 +129,9 @@
 
   function roof(D) {
     const F = D.facts;
-    $("roof-lede").textContent = `${D.meta.address}: ${fmt(F.usable_m2.v)} m² of usable roof, read from ICGC LiDAR, with the sun from a PVGIS typical year. Pick how many panels to install: fill the whole roof, or only neat blocks of the best panels, as real installers do.`;
+    const addr = D.roof.address || D.meta.address, usable = D.roof.usable_m2 != null ? D.roof.usable_m2 : F.usable_m2.v;
+    $("roof-lede").textContent = `${addr}: ${fmt(usable)} m² of usable roof, read from ICGC LiDAR, with the sun from a PVGIS typical year. Pick how many panels to install: fill the whole roof, or only neat blocks of the best panels, as real installers do.` +
+      (D.roof.separate ? ` This section shows a real roof; the sections below still use the demo roof (${D.meta.address}) until this one has been run through steps 04-09.` : "");
     const V = D.roof.variants && D.roof.variants.length ? D.roof.variants : [{
       option: "max", name: "Fill the roof", panel_wp: 420, rule: "every panel that fits and loses at most 40% of its sun to shade",
       panels: F.panels.v, kwp: F.kwp.v, yearly_kwh: F.solar_kwh.v, kwh_per_kwp: F.kwh_per_kwp.v,
@@ -173,7 +175,7 @@
       return [v, r];
     });
     const usedV = V.find((v) => v.option === chosen.option && v.panel_wp === chosen.panel_wp);
-    $("layout-used").textContent = `The rest of this page (spare power, neighbours, battery and money) uses ${usedV ? usedV.name.toLowerCase() + " with " + usedV.panel_wp + " W panels" : "the pipeline's layout"}. To use another layout there, rerun step 03 with --layout and --panel-wp, then steps 04-10. Block sizes and the share of the best panel are our assumptions (step 03, options.py); 540 W panel size is a typical catalogue panel.`;
+    $("layout-used").textContent = D.roof.separate ? `The sections below use the demo roof, not this one, until this roof goes through steps 04-10. Block sizes and the share of the best panel are our assumptions (step 03, options.py); 540 W panel size is a typical catalogue panel.` : `The rest of this page (spare power, neighbours, battery and money) uses ${usedV ? usedV.name.toLowerCase() + " with " + usedV.panel_wp + " W panels" : "the pipeline's layout"}. To use another layout there, rerun step 03 with --layout and --panel-wp, then steps 04-10. Block sizes and the share of the best panel are our assumptions (step 03, options.py); 540 W panel size is a typical catalogue panel.`;
 
     function draw() {
       const v = pick();
