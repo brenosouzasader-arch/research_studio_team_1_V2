@@ -122,8 +122,14 @@ def collect(metadata_csv, series_dir, max_series=None, seed=0):
     meta = pd.read_csv(metadata_csv)
     c_id, c_cnae, c_pow = pick(meta.columns, "id"), pick(meta.columns, "cnae"), pick(meta.columns, "power")
     meta = meta.assign(btype=meta[c_cnae].map(cnae_group))
-    files = {p.stem: p for p in Path(series_dir).glob("*.csv")}
-    meta = meta[meta[c_id].astype(str).isin(files)]
+    # any file under series_dir (sub-folders included); the id is the file name up to the first dot
+    files = {p.name.split(".")[0]: p for p in Path(series_dir).rglob("*") if p.is_file()}
+    ids = meta[c_id].astype(str)
+    print(f"metadata rows: {len(meta)}; series files found: {len(files)}; matching ids: {int(ids.isin(files).sum())}")
+    if not ids.isin(files).any():
+        raise SystemExit(f"No series file matches a metadata id.\n  first ids in metadata ({c_id}): {list(ids[:3])}"
+                         f"\n  first files in {series_dir}: {[p.name for p in list(Path(series_dir).rglob('*'))[:5]]}")
+    meta = meta[ids.isin(files)]
     if max_series and len(meta) > max_series:   # keep every non-household type, sample households
         rest = meta[meta.btype != "household"]
         hh = meta[meta.btype == "household"].sample(max(0, max_series - len(rest)), random_state=seed)
@@ -131,7 +137,13 @@ def collect(metadata_csv, series_dir, max_series=None, seed=0):
     dailies, shapes = [], []
     for _, row in meta.iterrows():
         sid = str(row[c_id])
-        d, s = daily_and_shape(read_series(files[sid]))
+        try:
+            d, s = daily_and_shape(read_series(files[sid]))
+        except SystemExit:
+            raise
+        except Exception as e:   # one bad file must not stop the run, but say why
+            print(f"skipped {files[sid].name}: {e!r}")
+            continue
         if d is None:
             continue
         kw = float(row[c_pow]) if pd.notna(row[c_pow]) and row[c_pow] > 0 else np.nan
