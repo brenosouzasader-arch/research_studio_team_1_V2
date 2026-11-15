@@ -1,0 +1,71 @@
+{
+  "supply_points": 2960,
+  "held_out_supply_points": 592,
+  "model_mae_kwh_day": 27.05,
+  "baseline_mae_kwh_day": 46.37,
+  "model_beats_baseline": true,
+  "per_type": {
+    "education": {
+      "held_out_days": 14147,
+      "model_mae_kwh_day": 35.12,
+      "baseline_mae_kwh_day": 65.63
+    },
+    "health_social": {
+      "held_out_days": 8371,
+      "model_mae_kwh_day": 23.49,
+      "baseline_mae_kwh_day": 45.31
+    },
+    "hospitality": {
+      "held_out_days": 14196,
+      "model_mae_kwh_day": 20.12,
+      "baseline_mae_kwh_day": 31.63
+    },
+    "household": {
+      "held_out_days": 39744,
+      "model_mae_kwh_day": 4.81,
+      "baseline_mae_kwh_day": 5.85
+    },
+    "industry": {
+      "held_out_days": 20174,
+      "model_mae_kwh_day": 84.59,
+      "baseline_mae_kwh_day": 113.92
+    },
+    "office": {
+      "held_out_days": 20262,
+      "model_mae_kwh_day": 12.54,
+      "baseline_mae_kwh_day": 26.29
+    },
+    "other": {
+      "held_out_days": 38730,
+      "model_mae_kwh_day": 32.48,
+      "baseline_mae_kwh_day": 70.14
+    },
+    "public_admin": {
+      "held_out_days": 39378,
+      "model_mae_kwh_day": 35.19,
+      "baseline_mae_kwh_day": 45.56
+    },
+    "retail": {
+      "held_out_days": 26056,
+      "model_mae_kwh_day": 18.1,
+      "baseline_mae_kwh_day": 26.19
+    },
+    "transport_storage": {
+      "held_out_days": 29533,
+      "model_mae_kwh_day": 18.05,
+      "baseline_mae_kwh_day": 54.43
+    }
+  },
+  "supply_points_per_type": {
+    "education": 168,
+    "health_social": 63,
+    "hospitality": 180,
+    "household": 504,
+    "industry": 207,
+    "office": 252,
+    "other": 488,
+    "public_admin": 438,
+    "retail": 320,
+    "transport_storage": 340
+  }
+}
