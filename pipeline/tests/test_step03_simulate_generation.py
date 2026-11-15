@@ -213,3 +213,27 @@ def test_shade_yield_writes_all_variants(offline, tmp_path, monkeypatch):
     assert maxv["panels"] == res["yield"]["panels"]
     for v in res["variants"]:
         assert v["panels"] <= maxv["panels"] or v["panel_wp"] == 540
+
+
+def test_combine_roofs_adds_two_roofs(tmp_path):
+    import json
+    from step03_simulate_generation import combine_roofs as cr
+    def roof(name, kwh):
+        times = [f"2023-01-01T{h:02d}:30" for h in range(24)]
+        (tmp_path / f"{name}_hourly_420_neat.csv").write_text("time_utc,kwh\n" + "".join(f"{t},{kwh}\n" for t in times))
+        (tmp_path / f"{name}_hourly.csv").write_text((tmp_path / f"{name}_hourly_420_neat.csv").read_text())
+        v = {"panel_wp": 420, "panel": "420 W", "option": "neat", "name": "Neat", "rule": "r", "blocks": 1, "panels": 10,
+             "kwp": 4.2, "tilt_deg": 10, "azimuth_deg": 135, "yearly_kwh": 1000, "kwh_per_kwp": 238, "mean_shade_loss": 0.1,
+             "monthly_kwh": [10] * 12, "peak_hour_kw": kwh, "hourly_file": f"{name}_hourly_420_neat.csv",
+             "panel_list": [{"x": 1, "y": 2, "kwh_year": 100, "corners": []}]}
+        y = {"building": {"refcat": name, "address": name, "query": name},
+             "yield": {"panels": 10, "kwp": 4.2, "tilt_deg": 10, "azimuth_deg": 135, "yearly_kwh": 1000, "kwh_per_kwp": 238,
+                       "mean_shade_loss": 0.1, "monthly_kwh": [10] * 12, "peak_hour_kw": kwh, "panels_left_out": 1,
+                       "max_shade_loss": 0.4, "panel_wp": 420, "layout": "neat"},
+             "usable_area_m2": 50.0, "usable_file": "u.geojson", "roof": {}, "lidar": {}, "panels": [], "variants": [v]}
+        (tmp_path / f"{name}_yield.json").write_text(json.dumps(y))
+        return (name, tmp_path / f"{name}_yield.json")
+    r = cr.combine([roof("red", 1.0), roof("yellow", 2.0)], tmp_path / "both")
+    assert r["yield"]["panels"] == 20 and r["yield"]["yearly_kwh"] == 2000 and r["yield"]["peak_hour_kw"] == 3.0
+    assert {q["roof"] for q in r["variants"][0]["panel_list"]} == {"red", "yellow"}
+    assert (tmp_path / "both_hourly.csv").exists() and r["variants"][0]["monthly_kwh"] == [20] * 12
