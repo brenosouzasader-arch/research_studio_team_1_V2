@@ -4,7 +4,7 @@ IAAC MaAI · Research Studio · team 1: Breno, Sindhuja, Daria
 
 **The question:** should a commercial property owner put solar panels on the whole roof, and can a group of nearby buildings make that investment worth more than using the power alone?
 
-The tool finds how much PV fits on the host roof, predicts when it makes more than the host uses, finds nearby buildings that use power at those hours, and compares sharing agreements (fixed or hourly shares, RD 244/2019) with keeping it all. It follows the team's roadmap in [docs/roadmap-track-2.pdf](docs/roadmap-track-2.pdf).
+The tool finds how much PV fits on the host roof, predicts when it makes more than the host uses, finds nearby buildings that use power at those hours, and compares sharing agreements (fixed or hourly shares, RD 244/2019) with keeping it all. Its 9 steps follow the team's development roadmap.
 
 V1 (the Eixample co-investment version) stays in [research_studio_team_1](https://github.com/iaac-maai/research_studio_team_1). This repository only has the V1 code that the new tool uses, plus the new steps. [WHAT_CAME_FROM_V1.md](WHAT_CAME_FROM_V1.md) lists every file.
 
@@ -26,7 +26,7 @@ research_studio_team_1_V2/
 │   └── examples/                     real outputs to try things without internet
 ├── sites/                            one settings file per candidate test site (Poblenou, UPC)
 ├── prototypes/                       post-midterm quick tests, kept for reference
-└── docs/                             roadmap, test-site research, recommendations
+└── docs/                             test-site research, recommendations on the roadmap
 ```
 
 ## The test site is still open
