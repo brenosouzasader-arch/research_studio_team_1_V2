@@ -82,6 +82,8 @@ No source was found for an installed price of a 20-500 kWh building battery in E
 |---|---|---|
 | Panel models: 420 W at 1.76 x 1.13 m (default) and 540 W at 2.28 x 1.13 m | typical catalogue panels; 540 W chosen because CEP9 = 58.32 kWp / 108 panels = 540 W each [CEP9 presentation] | `step02_pv_capacity/layout.py` (`MODULES`) |
 | Layout options "neat blocks" and "best blocks" | rectangles of 6+ / 8+ panels, 3+ / 4+ per row, panels at least 85% / 93% of the roof's 90th-percentile panel; chosen to look like real rooftop systems | `step03_simulate_generation/options.py` (`OPTIONS`) |
+| Where the real CEP9 panels are | 4 blocks, 187 m² in all, traced by eye from the ICGC orthophoto (`ortofoto_color_vigent`, CC BY 4.0) on 15 Nov 2026: light rows on the central roofs read as panels. Not checked against an installer plan, and 187 m² is less than 108 x 2.28 x 1.13 m = 278 m² of panel, so some panels may be missing or the photo may be older than the system | `pipeline/examples/cep9_actual.json` |
+| CEP9 monthly output | the reported 73,750 kWh/yr [CEP9 presentation] split over months with our step 03 shape (no monthly figures published) | `step10_publish_report/export_site_data.py` (`actual_variant`) |
 | CEP9 shares in our model | school 30% [The Guardian], 30 homes x 550 kWh (middle of 400-700 [CEP9]) = 23%, the other three members split the rest equally | `website/README.md` (step 08 `agreed_shares.py --shares`) |
 | Electricity taxes on a kWh | electricity tax 5.11% then VAT 21% (rates have changed over time) | `step08_share_energy/agreed_shares.py` (`TAX_FACTOR`) |
 | LFP installed price | €500 per kWh | `step06_prices_and_battery/battery_types.py` (`LFP_CAPEX_EUR_PER_KWH`) |

@@ -65,6 +65,38 @@ def layout_variants(y):
              "panel_list": [{"x": p["x"], "y": p["y"], "k": p["kwh_year"]} for p in y["panels"]]}]
 
 
+def actual_variant(a, variants):
+    """The real system as one more layout, from a JSON like examples/cep9_actual.json:
+    reported totals plus panel blocks traced from the photo. Our model's kWh per kWp on the
+    traced blocks (step 03 panels of the same wattage whose centre is inside a block) shows
+    how close the model gets on the real spots. The real monthly split isn't published, so
+    the months follow our model's shape, scaled to the reported yearly total."""
+    from shapely.geometry import Point, Polygon
+    blocks = [Polygon(b["corners"]) for b in a["blocks"]]
+    same = next((v for v in variants if v["option"] == "max" and v["panel_wp"] == a["panel_wp"]), None)
+    inside = []
+    if same:
+        for p in same["panel_list"]:
+            c = np.mean(p["c"][:4], axis=0) if p.get("c") else (p["x"], p["y"])
+            if any(b.contains(Point(*c)) for b in blocks):
+                inside.append(p["k"])
+    model_per_kwp = float(np.mean(inside)) / (a["panel_wp"] / 1000) if inside else None
+    shape = np.array(same["monthly_kwh"], float) if same else None
+    return {"option": "actual", "name": "Actual", "panel_wp": a["panel_wp"], "panel": f"{a['panel_wp']} W",
+            "rule": f"the real system: {a['panels']} panels of {a['panel_wp']} W [{a['source']}]",
+            "blocks": len(blocks), "panels": a["panels"], "kwp": a["kwp"], "yearly_kwh": a["yearly_kwh"],
+            "kwh_per_kwp": round(a["yearly_kwh"] / a["kwp"]), "mean_shade_loss": None,
+            "monthly_kwh": [round(x) for x in shape / shape.sum() * a["yearly_kwh"]] if shape is not None else None,
+            "panel_list": [], "actual": True, "source": a["source"], "source_url": a.get("source_url"),
+            "panel_wp_note": a.get("panel_wp_note"), "traced_by": a.get("traced_by"),
+            "traced": [{"name": b["name"], "c": b["corners"], "area_m2": round(Polygon(b["corners"]).area, 1)}
+                       for b in a["blocks"]],
+            "model_panels_on_blocks": len(inside),
+            "model_kwh_per_kwp": round(model_per_kwp) if model_per_kwp else None,
+            "model_yearly_kwh": round(model_per_kwp * a["kwp"]) if model_per_kwp else None,
+            "photo": a.get("photo")}
+
+
 def monthly_solar_days(times, gen):
     hour, _ = local_hour(times)
     month = times.astype("datetime64[M]").astype(int) % 12
@@ -149,6 +181,8 @@ def main():
     ap.add_argument("--lon", type=float, required=True, help="host longitude (as given to step 07)")
     ap.add_argument("--roof-yield", help="a different step 03 yield file for the roof section only "
                     "(e.g. a real roof whose later steps haven't run yet); default: --yield")
+    ap.add_argument("--actual", help="a JSON describing the real system on this roof (e.g. examples\\cep9_actual.json); "
+                    "adds an 'Actual' tab to the roof section")
     ap.add_argument("--sources", default="../docs/SOURCES.md")
     ap.add_argument("--out", default="../website/data/site_data.json")
     args = ap.parse_args()
@@ -173,6 +207,9 @@ def main():
     ids = ["host"] + list(others)
     demand = np.vstack([host["host_demand_kwh"]] + [others[i] for i in others])
     yl = y["yield"]
+    variants = layout_variants(ry)
+    if args.actual:
+        variants.append(actual_variant(json.loads(Path(args.actual).read_text(encoding="utf-8")), variants))
     typ = share["price_years"]["typical"]
 
     # buildings
@@ -278,7 +315,7 @@ def main():
                  "mean_shade_loss": yl["mean_shade_loss"], "panels_left_out": yl["panels_left_out"],
                  "solar_day_by_month": monthly_solar_days(times, gen),
                  "panels": [{"x": p["x"], "y": p["y"], "kwh": p["kwh_year"]} for p in y["panels"]],
-                 "variants": layout_variants(ry),
+                 "variants": variants,
                  "chosen": {"panel_wp": ry["yield"].get("panel_wp", 420), "option": ry["yield"].get("layout", "max")}},
         "host": {"surplus_by_month_kwh": hs["surplus_by_month_kwh"], "surplus_map": smap,
                  "first_day": str(times[0].astype("datetime64[D]"))},

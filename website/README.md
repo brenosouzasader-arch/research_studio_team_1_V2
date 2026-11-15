@@ -19,7 +19,7 @@ python -m step07_discover_neighbours.candidates --host-dir data\host\cep9 --lat 
 python -m step08_share_energy.battery_agent --host-dir data\host\cep9 --neighbours-dir data\neighbours\cep9 --prices-dir data\prices --out data\sharing\cep9
 python -m step08_share_energy.agreed_shares --host-dir data\host\cep9 --neighbours-dir data\neighbours\cep9 --shares host=0.30,homes_30=0.232 --guest-price 0 --out data\agreed\cep9
 python -m step09_compare_investment.investment --sharing-dir data\sharing\cep9 --kwp 53.34 --out data\investment\cep9
-python -m step10_publish_report.export_site_data --name cep9 --yield data\pv\cep9_yield.json --label "CEP9 school roof, Poblenou" --host-label "Institut Quatre Cantons" --host-kind school --max-distance 2000 --lat 41.40458605 --lon 2.20067448 --note "..." --reach-note "..." --host-use-note "..."
+python -m step10_publish_report.export_site_data --name cep9 --yield data\pv\cep9_yield.json --label "CEP9 school roof, Poblenou" --host-label "Institut Quatre Cantons" --host-kind school --max-distance 2000 --lat 41.40458605 --lon 2.20067448 --note "..." --reach-note "..." --host-use-note "..." --actual examples\cep9_actual.json
 ```
 
 Why these values (all ASSUMPTIONS unless marked):

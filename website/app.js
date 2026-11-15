@@ -12,7 +12,7 @@
   const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 
   function el(tag, attrs = {}, parent) {
-    const svg = ["svg", "g", "line", "rect", "path", "text", "circle", "polyline"].includes(tag);
+    const svg = ["svg", "g", "line", "rect", "path", "text", "circle", "polyline", "image", "defs", "pattern", "clipPath"].includes(tag);
     const e = svg ? document.createElementNS(NS, tag) : document.createElement(tag);
     for (const [k, v] of Object.entries(attrs)) {
       if (k === "text") e.textContent = v;
@@ -139,9 +139,10 @@
       panel_list: D.roof.panels.map((p) => ({ x: p.x, y: p.y, k: p.kwh })) }];
     const chosen = D.roof.chosen || { panel_wp: 420, option: "max" };
     const opts = [...new Map(V.map((v) => [v.option, v.name])).entries()];
-    const wps = [...new Set(V.map((v) => v.panel_wp))].sort((a, b) => a - b);
+    const wps = [...new Set(V.filter((v) => !v.actual).map((v) => v.panel_wp))].sort((a, b) => a - b);
     const state = { option: chosen.option, wp: chosen.panel_wp };
-    const pick = () => V.find((v) => v.option === state.option && v.panel_wp === state.wp) || V[0];
+    const actual = V.find((v) => v.actual);
+    const pick = () => (state.option === "actual" ? actual : V.find((v) => v.option === state.option && v.panel_wp === state.wp)) || V[0];
 
     function segButtons(host, items, key) {
       host.replaceChildren();
@@ -162,14 +163,14 @@
     const t = $("layout-table");
     t.replaceChildren();
     const hr = el("tr", {}, el("thead", {}, t));
-    for (const h of ["Layout", "Panel", "Panels", "kWp", "kWh a year", "kWh per kWp"]) el("th", { text: h }, hr);
+    for (const h of ["Layout", "Panel", "Panels", "kWp", "kWh a year", "kWh per kWp"]) el("th", { text: h, class: ["Layout", "Panel"].includes(h) ? "" : "n" }, hr);
     const tb = el("tbody", {}, t);
     const rows = V.map((v) => {
       const r = el("tr", {}, tb);
       el("td", { text: v.name }, r);
       el("td", { text: v.panel_wp + " W" }, r);
       el("td", { class: "n", text: fmt(v.panels) }, r);
-      el("td", { class: "n", text: fmt(v.kwp, 1) }, r);
+      el("td", { class: "n", text: fmt(v.kwp, v.actual ? 2 : 1) }, r);
       el("td", { class: "n", text: fmt(v.yearly_kwh) }, r);
       el("td", { class: "n", text: fmt(v.kwh_per_kwp) }, r);
       return [v, r];
@@ -181,16 +182,23 @@
       const v = pick();
       if (!v) return;
       for (const [rv, r] of rows) r.classList.toggle("pick", rv === v);
-      $("layout-rule").textContent = `${v.name}: ${v.rule}.` + (v.blocks ? ` ${v.blocks} blocks.` : "");
+      $("wppick").hidden = !!v.actual || wps.length < 2;
+      $("monthly-chip").dataset.kind = v.actual ? "reported" : "modelled";
+      $("monthly-chip").textContent = v.actual ? "reported total · our monthly shape" : "modelled · step 03";
+      $("layout-rule").textContent = v.actual
+        ? `The system that is really on this roof: ${fmt(v.panels)} panels, ${fmt(v.kwp, 2)} kWp and about ${fmt(v.yearly_kwh)} kWh a year [${v.source}]. ${v.panel_wp_note}. The CEP9 source gives no monthly figures and no panel plan, so the months follow our model's shape and the panel blocks are traced from the roof photo.`
+        : `${v.name}: ${v.rule}.` + (v.blocks ? ` ${v.blocks} blocks.` : "");
       const st = $("layout-stats");
       st.replaceChildren();
-      for (const [label, val, unit] of [["Panels", fmt(v.panels), ""], ["Peak power", fmt(v.kwp, 1), "kWp"],
+      for (const [label, val, unit] of [["Panels", fmt(v.panels), ""], ["Peak power", fmt(v.kwp, v.actual ? 2 : 1), "kWp"],
         ["Solar a year", fmt(v.yearly_kwh), "kWh"], ["Per kWp", fmt(v.kwh_per_kwp), "kWh/kWp"]]) {
         const s = el("div", { class: "stat" }, st);
         el("span", { class: "label", text: label }, s);
         const vv = el("span", { class: "value", text: val }, s);
         if (unit) el("small", { text: unit }, vv);
-        s.appendChild(chip({ kind: "modelled", src: "step 03", note: "ICGC LiDAR + PVGIS typical year" }));
+        s.appendChild(v.actual
+          ? chip(label === "Per kWp" ? { kind: "reported", src: "our division", note: "reported kWh ÷ reported kWp" } : { kind: "reported", src: v.source, note: v.source_url || "" })
+          : chip({ kind: "modelled", src: "step 03", note: "ICGC LiDAR + PVGIS typical year" }));
       }
       // monthly bars
       // one y-axis for every layout, so switching layouts compares like with like
@@ -200,19 +208,29 @@
       const full = (V.find((x) => x.option === "max" && x.panel_wp === v.panel_wp) || {}).monthly_kwh;
       yAxis(f, max, 4, (x) => fmt(x), "kWh");
       const bw = f.iw / 12;
+      if (v.actual) {
+        const pat = el("pattern", { id: "hatch", width: 6, height: 6, patternUnits: "userSpaceOnUse", patternTransform: "rotate(45)" }, el("defs", {}, f.svg));
+        el("rect", { width: 6, height: 6, fill: css("--solar-soft") }, pat);
+        el("line", { x1: 0, y1: 0, x2: 0, y2: 6, stroke: css("--solar"), "stroke-width": 2.5 }, pat);
+      }
+      $("monthly-note").textContent = v.actual
+        ? "Hatched: the reported yearly total spread over the months with our model's shape (CEP9 publishes no monthly figures). Same scale as the other layouts."
+        : "Same scale for every layout. The dashed outline is \"Fill the roof\" with the same panels.";
       m.forEach((val, i) => {
         const h = (val / max) * f.ih;
         const x = f.m.l + i * bw + 3;
-        if (full && v.option !== "max") {   // faint outline: what filling the roof would give
+        if (full && v.option !== "max" && !v.actual) {   // faint outline: what filling the roof would give
           const fh = (full[i] / max) * f.ih;
           el("rect", { x, y: f.m.t + f.ih - fh, width: bw - 6, height: fh, rx: 3, fill: "none", stroke: css("--solar"), "stroke-dasharray": "3 3", "stroke-width": 1 }, f.svg);
         }
-        const r = el("rect", { x, y: f.m.t + f.ih - h, width: bw - 6, height: h, rx: 3, fill: css("--solar"), tabindex: 0 }, f.svg);
+        const r = el("rect", { x, y: f.m.t + f.ih - h, width: bw - 6, height: h, rx: 3, fill: v.actual ? "url(#hatch)" : css("--solar"), stroke: v.actual ? css("--solar") : "none", tabindex: 0 }, f.svg);
         el("text", { x: x + (bw - 6) / 2, y: f.h - 8, "text-anchor": "middle", text: MONTHS[i] }, f.svg);
-        const show = (evt) => showTip(evt, MONTHS[i], [{ value: fmt(val) + " kWh", label: "solar", color: css("--solar") }]);
+        const show = (evt) => showTip(evt, MONTHS[i], [{ value: fmt(val) + " kWh", label: v.actual ? "reported total, our monthly shape" : "solar", color: css("--solar") }]);
         r.addEventListener("pointermove", show); r.addEventListener("focus", (e) => show({ clientX: e.target.getBoundingClientRect().x, clientY: e.target.getBoundingClientRect().y }));
         r.addEventListener("pointerleave", hideTip); r.addEventListener("blur", hideTip);
       });
+      $("panels-key").textContent = v.actual ? "outlined = real panel blocks" : "darker = produces more";
+      if (v.actual) { drawActual(v); return; }
       // panel drawing: same frame for every layout, same colours for every layout of one panel model
       const all = V.flatMap((x) => x.panel_list);
       const pts = all.flatMap((p) => p.c || [[p.x, p.y]]);
@@ -237,6 +255,31 @@
       const vk = v.panel_list.map((p) => p.k);
       $("panel-note").textContent = v.panels ? `${fmt(Math.min(...vk))} to ${fmt(Math.max(...vk))} kWh a year per panel. Tilt ${fmt(D.roof.tilt_deg)}°, mean shade loss ${pct(v.mean_shade_loss)}.` : "No block on this roof is big enough for this layout.";
     }
+    function drawActual(v) {
+      const host = $("panels");
+      const ph = v.photo, b = ph ? ph.bounds_25831 : null;
+      const pts = v.traced.flatMap((t) => t.c);
+      const [x0, y0, x1, y1] = b || [Math.min(...pts.map((q) => q[0])) - 5, Math.min(...pts.map((q) => q[1])) - 5,
+        Math.max(...pts.map((q) => q[0])) + 5, Math.max(...pts.map((q) => q[1])) + 5];
+      const scale = 300 / Math.max(x1 - x0, y1 - y0);
+      const g = frame(host, (x1 - x0) * scale, (y1 - y0) * scale, { l: 0, r: 0, t: 0, b: 0 });
+      g.svg.setAttribute("aria-label", "Roof photo with the real panel blocks outlined");
+      if (ph) el("image", { href: /^(data:|https?:)/.test(ph.file) ? ph.file : "data/" + ph.file, x: 0, y: 0, width: (x1 - x0) * scale, height: (y1 - y0) * scale, preserveAspectRatio: "none" }, g.svg);
+      const X = (x) => (x - x0) * scale, Y = (y) => (y1 - y) * scale;
+      for (const t of v.traced) {
+        const d = "M" + t.c.map((q) => X(q[0]).toFixed(1) + "," + Y(q[1]).toFixed(1)).join("L") + "Z";
+        el("path", { d, fill: "none", stroke: "#fff", "stroke-width": 4, "stroke-linejoin": "round" }, g.svg);
+        const r = el("path", { d, fill: "rgb(224 122 95 / 0.18)", stroke: css("--actual"), "stroke-width": 2, "stroke-linejoin": "round", tabindex: 0 }, g.svg);
+        r.addEventListener("pointermove", (evt) => showTip(evt, "Real panel block", [{ value: fmt(t.area_m2) + " m²", label: t.name }]));
+        r.addEventListener("pointerleave", hideTip);
+      }
+      const area = v.traced.reduce((a, t) => a + t.area_m2, 0);
+      const diff = v.model_kwh_per_kwp ? (v.model_kwh_per_kwp / v.kwh_per_kwp - 1) : null;
+      $("panel-note").textContent = `Outlined: ${v.traced.length} panel blocks (${fmt(area)} m²) traced by ${v.traced_by}. Not checked against an installer plan. ` +
+        (v.model_kwh_per_kwp ? `On these spots our model gives ${fmt(v.model_kwh_per_kwp)} kWh per kWp, against ${fmt(v.kwh_per_kwp)} reported (${diff >= 0 ? "+" : ""}${pct(diff)}), from the ${v.model_panels_on_blocks} model panels inside the blocks.` : "") +
+        (ph ? ` Photo: ${ph.source}.` : "");
+    }
+
     draw();
   }
 
@@ -367,7 +410,7 @@
     const tb = $("forecast-table");
     tb.replaceChildren();
     const hr = el("tr", {}, el("thead", {}, tb));
-    for (const h of ["Days ahead", "Model", "Same hour last week", "Typical year"]) el("th", { text: h }, hr);
+    for (const h of ["Days ahead", "Model", "Same hour last week", "Typical year"]) el("th", { text: h, class: h === "Days ahead" ? "" : "n" }, hr);
     const body = el("tbody", {}, tb);
     for (const [k, r] of Object.entries(D.prices.model.horizons)) {
       const tr = el("tr", {}, body);
@@ -519,7 +562,7 @@
     const t = $("agreed-table");
     t.replaceChildren();
     const hr = el("tr", {}, el("thead", {}, t));
-    for (const h of ["Building", "Our tool: kWh from roof", "Our tool: saves €/yr", "CEP9: share", "CEP9: kWh used", "CEP9: saves €/yr"]) el("th", { text: h }, hr);
+    for (const h of ["Building", "Our tool: kWh from roof", "Our tool: saves €/yr", "CEP9: share", "CEP9: kWh used", "CEP9: saves €/yr"]) el("th", { text: h, class: h === "Building" ? "" : "n" }, hr);
     const tb = el("tbody", {}, t);
     const label = (id) => (D.buildings.find((b) => b.id === id) || { label: id }).label;
     for (const [id, r] of Object.entries(A.per_building)) {

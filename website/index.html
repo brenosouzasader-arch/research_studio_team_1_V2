@@ -8,13 +8,13 @@
 <meta name="description" content="Who can use a big roof's spare solar? Results of the Roofscapes (Re)Powered pipeline, with every number linked to its source.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Inter:wght@400;500;600&family=Space+Grotesk:wght@500;600&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:ital,wght@0,400;0,500;0,600;0,700;0,800;1,400&display=swap">
 <link rel="stylesheet" href="styles.css">
 </head>
 <body>
 <div class="shell">
   <nav class="rail" aria-label="Steps">
-    <div class="brand">Roofscapes (Re)Powered<small>IAAC MaAI · team 1</small></div>
+    <div class="brand">Roofscapes (Re)Powered<small>IAAC MaAI01 · Research Studio</small></div>
     <ul class="steps" id="steps">
       <li><a href="#overview"><span>—</span>Overview</a></li>
       <li><a href="#roof"><span>02-03</span>Roof and solar</a></li>
@@ -30,9 +30,16 @@
 
   <main>
     <div class="wrap">
+      <header class="cover">
+        <div class="stripe" aria-hidden="true"><i style="--c:var(--st-1)"></i><i style="--c:var(--st-2)"></i><i style="--c:var(--st-3)"></i><i style="--c:var(--st-4)"></i><i style="--c:var(--st-5)"></i><i style="--c:var(--st-6)"></i></div>
+        <h1>Roofscapes (Re)Powered</h1>
+        <p class="sub">Who can use a big roof's spare solar? Tested on a real Barcelona roof, with every number linked to its source.</p>
+        <p class="team">Breno Sader | Daria Basha | Sindhuja Davuluri</p>
+        <p class="studio">IAAC MaAI01 Research Studio 2026-27</p>
+      </header>
       <section id="overview">
-        <span class="eyebrow">Rooftop solar · Barcelona</span>
-        <h1>Who can use this roof's spare solar?</h1>
+        <span class="eyebrow">The question</span>
+        <h2>Who can use this roof's spare solar?</h2>
         <p class="lede">A big roof often makes more power than its building uses, mostly at weekends and in summer. This tool finds that spare power hour by hour, connects the closest neighbours who can use it, tests whether a battery is worth it with real Barcelona prices, and works out what the roof owner and the neighbours gain.</p>
         <div class="banner" id="demo-banner" hidden><b>What is assumed</b><span id="demo-note"></span></div>
         <div class="stats" id="hero-stats"></div>
@@ -42,6 +49,7 @@
             <span class="chip" data-kind="measured">measured</span><span class="small">real data: prices, meters</span>
             <span class="chip" data-kind="modelled">modelled</span><span class="small">computed by the pipeline</span>
             <span class="chip" data-kind="assumption">assumption</span><span class="small">a value we chose; listed in Sources</span>
+            <span class="chip" data-kind="reported">reported</span><span class="small">published by the real project</span>
           </div>
         </div>
       </section>
@@ -63,12 +71,12 @@
         </div>
         <div class="grid3">
           <div class="card">
-            <div class="card-head"><h3>Solar output by month</h3><span class="chip" data-kind="modelled">modelled · step 03</span></div>
+            <div class="card-head"><h3>Solar output by month</h3><span class="chip" data-kind="modelled" id="monthly-chip">modelled · step 03</span></div>
             <div id="monthly"></div>
-            <p class="small">Same scale for every layout. The dashed outline is "Fill the roof" with the same panels.</p>
+            <p class="small" id="monthly-note"></p>
           </div>
           <div class="card">
-            <div class="card-head"><h3>Panel layout</h3><span class="small">darker = produces more</span></div>
+            <div class="card-head"><h3>Panel layout</h3><span class="small" id="panels-key">darker = produces more</span></div>
             <div id="panels"></div>
             <p class="small" id="panel-note"></p>
           </div>
@@ -196,6 +204,7 @@
         <p class="lede">Every source the tool uses and what it backs up, copied from <code>docs/SOURCES.md</code> in the repository.</p>
         <div id="sources-body"></div>
       </section>
+      <footer class="foot"><span>Roofscapes (Re)Powered · IAAC MaAI01 Research Studio 2026-27</span><span>Breno Sader | Daria Basha | Sindhuja Davuluri</span></footer>
     </div>
   </main>
 </div>
