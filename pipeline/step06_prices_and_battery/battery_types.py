@@ -1,5 +1,9 @@
 """Battery types the user can compare. LFP is the default.
 
+Only the two chemistries that are well studied and on sale for buildings today are here: LFP and NMC.
+Sodium-ion, vanadium flow and second-life car batteries were removed on 15 Nov 2026: we found no
+checkable performance numbers for them at building size, so most of their rows were guesses.
+
 Every number has a source or is marked ASSUMPTION. The sources are listed in docs/SOURCES.md
 under "Batteries"; the short name in brackets points to that list.
 
@@ -17,9 +21,11 @@ Battery life used by the tool = the shorter of calendar_years and cycle_life / c
 so a battery that cycles every day wears out sooner (step 09 adds the replacement cost).
 """
 
-LFP_CAPEX_EUR_PER_KWH = 500.0   # ASSUMPTION: no checkable European price for a 20-500 kWh building
-                                # battery found yet. For scale: PNNL 2022 gives 385 USD/kWh for a
-                                # 100 MW, 4-hour LFP plant (utility size, so cheaper per kWh) [PNNL 2022].
+LFP_CAPEX_EUR_PER_KWH = 500.0   # ASSUMPTION: no checkable Spanish or EU installed price for a 20-500 kWh building
+                                # battery found yet (the only recent figure we found was a UK installer blog in GBP,
+                                # 200-800 per kWh depending on size [Reonic 2026], too wide and not Spanish).
+                                # For scale: PNNL 2022 gives 385 USD/kWh for a 100 MW, 4-hour LFP plant
+                                # (utility size, so cheaper per kWh) [PNNL 2022]. Replace with a Barcelona quote.
 
 TYPES = {
     "lfp": {
@@ -44,44 +50,6 @@ TYPES = {
         "c_rate": 0.5,                   # ASSUMPTION, as LFP
         "om_share_per_year": 0.025,      # [NREL ATB 2024]
         "notes": "Smaller and lighter than LFP but shorter-lived here, and uses cobalt and nickel.",
-    },
-    "sodium_ion": {
-        "label": "Sodium-ion",
-        "capex_eur_per_kwh": LFP_CAPEX_EUR_PER_KWH * 0.8,   # [IEA GEVO 2024] "could cost up to 20% less" IF
-                                                            # brought to scale: a best case, not today's price
-        "round_trip": 0.85,              # ASSUMPTION: same as lithium-ion; no checkable figure found
-        "cycle_life": 3000,              # ASSUMPTION: no checkable figure found
-        "calendar_years": 12,            # ASSUMPTION: no checkable figure found
-        "usable_share": 0.8,             # ASSUMPTION, as LFP
-        "c_rate": 0.5,                   # ASSUMPTION, as LFP
-        "om_share_per_year": 0.025,      # ASSUMPTION, as LFP
-        "notes": "Needs no lithium [IEA GEVO 2024]. Production outside China is still at "
-                 "laboratory or pilot scale [IEA GEVO 2024]. Performance numbers are placeholders.",
-    },
-    "vanadium_flow": {
-        "label": "Vanadium redox flow",
-        "capex_eur_per_kwh": LFP_CAPEX_EUR_PER_KWH * 385 / 356,   # [PNNL 2022] 100 MW 10 h: VRFB 385 vs LFP 356 USD/kWh
-        "round_trip": 0.675,             # [PNNL 2020] literature 65-80%; model assumes 67.5% (2020)
-        "cycle_life": 10000,             # [PNNL 2020] "almost all estimating ... 10,000 cycles and above"
-        "calendar_years": 15,            # [PNNL 2020] "between 10 and 20 years"; we take the middle
-        "usable_share": 1.0,             # ASSUMPTION: flow batteries can be fully discharged
-        "c_rate": 0.25,                  # ASSUMPTION: flow batteries are usually 4-hour or longer
-        "om_share_per_year": 0.025,      # ASSUMPTION, as LFP
-        "notes": "Electrolyte essentially does not degrade; membranes and electrodes may need "
-                 "replacing every 10 years [PNNL 2020]. Large and heavy: needs a plant room, not a roof. "
-                 "Loses more energy per cycle than lithium.",
-    },
-    "second_life_ev": {
-        "label": "Second-life electric-car batteries",
-        "capex_eur_per_kwh": LFP_CAPEX_EUR_PER_KWH * 0.5,   # [Dong 2023] "20%-80% of new batteries"; we take 50%
-        "round_trip": 0.80,              # ASSUMPTION: "lower roundtrip efficiency" than new [Dong 2023], no figure
-        "cycle_life": 2000,              # ASSUMPTION: no checkable figure found
-        "calendar_years": 7,             # [NREL 2015] "3-10 year second use lifetimes"; we take 7
-        "usable_share": 0.55,            # [Dong 2023] "50%-60% DOD" for second-life packs
-        "c_rate": 0.5,                   # ASSUMPTION, as LFP
-        "om_share_per_year": 0.025,      # ASSUMPTION, as LFP
-        "notes": "Re-uses car batteries that kept about 70-80% of their capacity [NREL 2015, Dong 2023]: "
-                 "the greenest option, but each pack is different and life is uncertain.",
     },
 }
 

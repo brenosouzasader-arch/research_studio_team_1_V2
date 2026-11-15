@@ -1,4 +1,4 @@
-"""Offline tests for the V2 steps 04, 07, 08 and 09, with the Bruc 59 example roof as the solar input."""
+"""Offline tests for the V2 steps 04, 07, 08 and 09, with the CEP9 school roof (neat blocks, 420 W) as the solar input."""
 import json
 from pathlib import Path
 
@@ -10,12 +10,12 @@ from step07_discover_neighbours import candidates as nb
 from step08_share_energy import allocation as al
 from step09_compare_investment import investment as inv
 
-EXAMPLE = Path(__file__).resolve().parent.parent / "examples" / "bruc59_hourly.csv"
+EXAMPLE = Path(__file__).resolve().parent.parent / "examples" / "cep9_hourly.csv"
 
 
 @pytest.fixture
 def host(tmp_path):
-    host_table.run(EXAMPLE, tmp_path / "host", host_kind="office", host_floor_m2=300, building_id="demo")
+    host_table.run(EXAMPLE, tmp_path / "host", host_kind="school", host_floor_m2=1812, building_id="demo")
     return tmp_path / "host"
 
 
@@ -162,3 +162,45 @@ def test_agreed_shares_fixed_and_free():
     assert res["per_building"]["host"]["used_kwh"] == 7        # 2 + 5
     assert res["per_building"]["a"]["to_grid_kwh"] == 2        # its share in hour 3 isn't needed
     assert res["per_building"]["a"]["saving_eur"] == 2         # free: saves its used kWh x price
+
+
+# ---- steps 07 + 08 as one tool: the group optimiser (step08_share_energy/optimise.py) -------------
+from step08_share_energy import optimise as opt
+
+
+def _case(mode="wired"):
+    h = np.arange(8760) % 24
+    gen = np.where((h >= 8) & (h < 17), 10.0, 0.0)
+    host = np.where((h >= 8) & (h < 17), 4.0, 0.5)                 # the host uses 4 of 10 kW by day
+    day = np.where((h >= 8) & (h < 17), 3.0, 0.2)                  # a daytime user, 3 kW
+    night = np.where(h >= 18, 3.0, 0.0)                            # uses nothing while the sun shines
+    big = np.where((h >= 8) & (h < 17), 5.0, 0.0)
+    price = np.full(8760, 0.15)
+    return opt.Case(gen, host, ["day", "night", "big"], [day, night, big], price, price * 0.5, mode)
+
+
+def test_optimiser_keeps_the_buildings_that_use_solar_and_skips_the_one_that_does_not():
+    seen, exhaustive = opt.search(_case())
+    assert exhaustive and len(seen) == 8                            # every group of 3 buildings: 2**3
+    best = max(seen, key=lambda k: seen[k]["score"])
+    assert set(best) == {0, 2}                                      # day + big; "night" adds nothing
+    assert seen[best]["used_kwh"] > seen[()]["used_kwh"]
+
+
+def test_wired_sharing_wastes_no_more_than_fixed_shares():
+    for ids in [(0,), (0, 2), (0, 1, 2)]:
+        wired, fixed = _case("wired").evaluate(ids), _case("legal").evaluate(ids)
+        assert wired["used_kwh"] >= fixed["used_kwh"] - 1e-6
+        for m in (wired, fixed):                                    # energy is conserved
+            assert abs(m["used_kwh"] + m["export_kwh"] - 90 * 365) < 1e-3
+
+
+def test_optimiser_falls_back_to_local_search_when_there_are_too_many_groups():
+    seen, exhaustive = opt.search(_case(), exhaustive_limit=3, random_starts=5)
+    assert not exhaustive and len(seen) >= 3
+    assert set(max(seen, key=lambda k: seen[k]["score"])) == {0, 2}
+
+
+def test_no_guest_pays_more_than_the_grid():
+    m = _case().evaluate((0, 2))
+    assert m["guests_save_eur"] >= 0

@@ -52,7 +52,7 @@ def layout_variants(y):
     wattage), for the website's layout switch. Older yield files have none: then the one
     layout they hold is shown as "Fill the roof" with 420 W panels."""
     keys = ("panel_wp", "panel", "option", "name", "rule", "blocks", "panels", "kwp", "yearly_kwh",
-            "kwh_per_kwp", "mean_shade_loss", "monthly_kwh")
+            "kwh_per_kwp", "mean_shade_loss", "monthly_kwh", "funnel", "left_out")
     if y.get("variants"):
         return [{**{k: v.get(k) for k in keys},
                  "panel_list": [{"c": p["corners"], "k": p["kwh_year"]} for p in v["panel_list"]]}
@@ -181,6 +181,14 @@ def main():
     ap.add_argument("--lon", type=float, required=True, help="host longitude (as given to step 07)")
     ap.add_argument("--roof-yield", help="a different step 03 yield file for the roof section only "
                     "(e.g. a real roof whose later steps haven't run yet); default: --yield")
+    ap.add_argument("--warning", action="append", default=[],
+                    help="a warning for the top of the page, as 'what is wrong | what we need to look at or change'; repeat it")
+    ap.add_argument("--property", action="append", default=[],
+                    help="a step 01 building.json to list on the page's search (e.g. examples\\a160_building.json); repeat it. "
+                         "The case's own property is added by itself")
+    ap.add_argument("--match-dir", help="folder with match_summary.json files (default data\\match), named <name>_wired and <name>_legal")
+    ap.add_argument("--compare-image", help="a picture of another tool's panel plan (e.g. Google Solar), in website\\data\\")
+    ap.add_argument("--compare-caption", default="", help="what the comparison picture shows and where it is from")
     ap.add_argument("--actual", help="a JSON describing the real system on this roof (e.g. examples\\cep9_actual.json); "
                     "adds an 'Actual' tab to the roof section")
     ap.add_argument("--sources", default="../docs/SOURCES.md")
@@ -303,7 +311,29 @@ def main():
         "pv_capex": fact(capex.get("direct_no_battery"), "assumption", "step 09", "€", "€1,400 per kWp"),
     }
 
+    warnings = []
+    for w in ([args.note] if args.note else []) + args.warning:
+        text, _, nxt = w.partition("|")
+        warnings.append({"text": text.strip(), "next": nxt.strip()})
+    props = []
+    for pth in args.property:
+        props.append(json.loads(Path(pth).read_text(encoding="utf-8")))
+    main_rec = dict(y["building"])
+    main_rec.setdefault("refcat", y["building"]["refcat"])
+    here = next((r for r in props if r.get("refcat") == main_rec["refcat"]), None)
+    gaps_path = Path(__file__).resolve().parent.parent / "step01_select_host" / "known_gaps.json"
+    match = {}
+    for mode in ("wired", "legal"):
+        mp = Path(args.match_dir or d / "match") / f"{n}_{mode}" / "match_summary.json"
+        if mp.exists():
+            match[mode] = json.loads(mp.read_text(encoding="utf-8"))
+    step01 = {"properties": [{**{k: v for k, v in r.items() if k != "_about"}, "analysed": r.get("refcat") == main_rec["refcat"],
+                              "about": r.get("_about", "")} for r in props],
+              "gaps": json.loads(gaps_path.read_text(encoding="utf-8")) if gaps_path.exists() else [],
+              "run_command": 'python -m step01_select_host.find_building "<address>, Barcelona" --laz-dir data\\lidar'}
     data = {
+        "step01": step01, "match": match, "warnings": warnings,
+        "compare": {"file": args.compare_image, "caption": args.compare_caption} if args.compare_image else None,
         "meta": {"case": args.label, "address": y["building"]["query"], "refcat": y["building"]["refcat"],
                  "generated": str(date.today()), "demo": bool(args.note), "note": args.note,
                  "host_label": args.host_label, "host_kind": args.host_kind,

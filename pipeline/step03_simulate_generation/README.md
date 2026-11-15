@@ -22,42 +22,36 @@ This writes `data\weather\barcelona_tmy.json` (8760 hours from PVGIS).
 ## One roof
 
 ```
-python -m step03_simulate_generation.shade_yield "Carrer de Roger de Llúria 56, Barcelona" --laz-dir data\lidar --out lluria56
+python -m step03_simulate_generation.shade_yield "Camí Antic de València 35, Barcelona" --laz-dir data\lidar --usable cep9_usable.geojson --layout neat --out data\pv\cep9
 ```
 
-To use a step 2 reading you already have , add `--usable lluria56_usable.geojson`.
+`--usable` takes a step 02 reading you already have; leave it out and the roof is read from LiDAR.
 
-Panels that lose more than 40% of their sun to shade are left out (for example on a lower terrace under the building's own top floors). They show in grey in the picture and are counted as `panels_left_out`. Change the limit with `--max-shade 0.3`, or keep every panel with `--max-shade 1`.
+Panels that lose more than 40% of their sun to shade are left out (for example on a lower terrace under the building's own top floors). Change the limit with `--max-shade 0.3`, or keep every panel with `--max-shade 1`.
 
-Outputs:
-- `lluria56_yield.json`: panels, kWp, yearly kWh, kWh per kWp, mean shade loss, monthly kWh, and every panel with its kWh and shade loss
-- `lluria56_hourly.csv`: 8760 hours of kWh for the whole roof (input for step 5 and energy sharing)
-- `lluria56_panels.geojson`: panel outlines (EPSG:25831), opens in QGIS
-- `lluria56_panels.png`: the layout, dark blue = most shade, orange = best panels
-- `lluria56_usable.geojson`: the usable roof it used (only when you leave out `--usable`)
-
-## All roofs, ranked
-
-```
-python -m step03_simulate_generation.batch roofs.csv --laz-dir data\lidar --out data\yield
-```
-
-To rank several candidate hosts: make `roofs.csv` with a column `address` (optional `block` = any label, `lat`, `lon`) and run `python -m step03_simulate_generation.batch roofs.csv --laz-dir data\lidar --out data\yield_hosts`. `ranking.csv` lists them from most to least yearly kWh; a roof that fails is listed with its error. `--block upc` runs only the rows labelled `upc`.
-
+Outputs (for `--out data\pv\cep9`):
+- `cep9_yield.json`: panels, kWp, yearly kWh, kWh per kWp, mean shade loss, monthly kWh, every panel with its kWh and shade loss, all six layouts under `variants`, and the orientation tried
+- `cep9_hourly.csv`: 8760 hours of kWh for the whole roof (input for step 04 and the sharing tool); one more file per layout, `cep9_hourly_<W>_<option>.csv`
+- `cep9_panels.geojson`: panel outlines (EPSG:25831), opens in QGIS
+- `cep9_panels.png` and `cep9_options.png`: the layout, and all layouts side by side
+- `cep9_usable.geojson`: the usable roof it used (only when you leave out `--usable`)
 
 ## How the calculation works
 
-1. **Sun path:** sun position for every hour of the year (`step4/sun.py`, same formulas as the 3D map).
+1. **Sun path:** sun position for every hour of the year (`sun.py`, same formulas as the 3D map).
 2. **Horizon:** a 1 m height grid from all LiDAR points within 150 m. From each panel, 36 directions are walked outwards and the steepest angle to anything taller is kept.
 3. **Shade:** the sun is blocked when it is lower than the horizon in its direction. Diffuse sky light is scaled by the share of open sky.
 4. **Sun on the panel:** direct + diffuse + light reflected by the roof (albedo 0.2), on the tilted panel.
-5. **Electricity:** 420 W per panel, minus heat losses (−0.35% per °C above 25 °C) and 14% system losses (PVGIS default).
+5. **Electricity:** the panel's watts (420 W or 540 W), minus heat losses (−0.35% per °C above 25 °C, **ASSUMPTION**: a typical crystalline-silicon datasheet value) and 14% system losses (**ASSUMPTION**: PVGIS has no default for losses; 14 is the value in its own example request [PVGIS API page]; Sindhuja's repo uses it too; the usual range is 10-20%).
 
-## Checks to do (step 6)
+## Checks
 
-- Compare yearly kWh with PVGIS for the same kWp, tilt and direction on 10 open roofs (target ±10%).
-- Compare shade loss with Ladybug or Google Solar on a few shaded roofs.
-- Numbers to tune: `step3/layout.py` (panel size, tilt, row spacing) and `step4/energy.py` (losses).
+Done: CEP9 school, 15 Nov 2026. With the real panels' spots our model gives 1,381 kWh per kWp, and on the whole roof 1,317, against 1,265 reported by CEP9 [CEP9 presentation]: 4-9% higher. Reasons not yet separated: weather year (PVGIS typical year vs the real years), the assumed 14% losses, and panels at a slightly different tilt.
+
+To do:
+- Compare yearly kWh with PVGIS's own tool for the same kWp, tilt and direction on 10 open roofs (target ±10%).
+- Compare shade loss with Google Solar or Ladybug on a few shaded roofs.
+- Check the temperature coefficient and system losses against a datasheet and an inverter spec.
 
 ## Known limits
 
@@ -65,19 +59,28 @@ To rank several candidate hosts: make `roofs.csv` with a column `address` (optio
 - Panels on a roof the LiDAR misses (new buildings since 2023) are not shaded correctly.
 - No snow, no soiling seasons, no inverter clipping.
 
-## Layout options and panel size (`--layout`, `--panel-wp`)
+## Layout options and panel size (`--layout`, `--panel-wp`, `--orient`)
 
 Real installers build neat blocks on the best part of a roof and leave out single panels and weaker spots. So every run works out three layouts, for both 420 W and 540 W panels (`--compare-wp 420,540`):
 
 | Option | What it keeps |
 |---|---|
-| `max` Fill the roof | every panel that fits (default) |
-| `neat` Neat blocks | rectangles of 6+ panels (3+ per row), each panel at least 85% of the roof's best |
-| `best` Best blocks | rectangles of 8+ panels (4+ per row), each panel at least 93% of the roof's best |
+| `max` Fill the roof | every panel that fits and loses at most 40% of its sun (default) |
+| `neat` Neat blocks | rectangles of at least 12 m² of panels, at least 2 panels wide both ways, each panel at least 85% of the roof's best |
+| `best` Best blocks | rectangles of at least 16 m² of panels, at least 2 panels wide both ways, each panel at least 93% of the roof's best |
 
-"The roof's best" is the 90th-percentile panel. Block sizes and the 85% / 93% cut-offs are ASSUMPTIONS (see `options.py` and docs/SOURCES.md). The run prints a table of all six layouts and draws them in `<out>_options.png`. Each has its own hourly file `<out>_hourly_<W>_<option>.csv`, and all are listed under `variants` in `<out>_yield.json`; the website shows them with a switch. `--layout neat --panel-wp 540` makes that layout the main output (`<out>_hourly.csv`), which steps 04-09 use.
+How a layout is made, step by step (the website shows these steps and the panels dropped at each one, with the reason):
 
-First test, CEP9 school (15 Nov 2026): the real system is 108 panels of 540 W in tidy rows; our "fill the roof" placed 197 of 420 W, including about 85 scattered on the cluttered south roof.
+1. **Fit:** lay panel rows on the usable roof, as many as fit.
+2. **Shade:** drop panels that lose more than 40% of their sun.
+3. **Cut-off:** for neat and best, drop panels below 85% / 93% of "the roof's best" (the 90th-percentile panel). Reason shown: *weak*.
+4. **Blocks:** from the panels left, repeatedly take the biggest rectangle that is big enough and keep it as a block. Panels that are good but are in no big enough rectangle are dropped. Reason shown: *loose*.
+
+Changes made 15 Nov 2026 after review: a block is judged the same whichever way it runs (2 × 3 and 3 × 2 panels are the same block; a single row never counts), and its size is an area, so the bigger 540 W panel needs fewer panels (5 instead of 6 for a neat block). The areas (12 and 16 m²), the "2 wide" rule and the 85% / 93% cut-offs are ASSUMPTIONS (see `options.py` and docs/SOURCES.md): they are meant to be adjusted once we see more real systems.
+
+The run prints a table of all six layouts and draws them in `<out>_options.png`. All layouts are listed under `variants` in `<out>_yield.json`, each with its `funnel` (how many panels at each step) and `left_out` (which panels and why). `--layout neat --panel-wp 540` makes that layout the main output (`<out>_hourly.csv`), which steps 04-09 use.
+
+First test, CEP9 school (15 Nov 2026): the real system is 108 panels of 540 W in tidy rows; our "fill the roof" placed 197 of 420 W, including about 85 scattered on the cluttered south roof. **The numbers on the website for neat and best blocks were made with the old rule (6+ panels, 3+ per row); rerun step 03 and step 10 to refresh them.**
 
 ## Fewer panels (`--max-panels`)
 

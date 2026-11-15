@@ -16,10 +16,11 @@
   <nav class="rail" aria-label="Steps">
     <div class="brand">Roofscapes (Re)Powered<small>IAAC MaAI01 · Research Studio</small></div>
     <ul class="steps" id="steps">
-      <li><a href="#overview"><span>—</span>Overview</a></li>
+      <li><a href="#overview"><span>—</span>The service</a></li>
+      <li><a href="#property"><span>01</span>Find the property</a></li>
       <li><a href="#roof"><span>02-03</span>Roof and solar</a></li>
       <li><a href="#surplus"><span>04</span>Spare power</a></li>
-      <li><a href="#neighbours"><span>05-07</span>Neighbours</a></li>
+      <li><a href="#neighbours"><span>05-08</span>Neighbours</a></li>
       <li><a href="#prices"><span>06</span>Prices</a></li>
       <li><a href="#battery"><span>06-08</span>Battery</a></li>
       <li><a href="#money"><span>09</span>Money</a></li>
@@ -33,24 +34,55 @@
       <header class="cover">
         <div class="stripe" aria-hidden="true"><i style="--c:var(--st-1)"></i><i style="--c:var(--st-2)"></i><i style="--c:var(--st-3)"></i><i style="--c:var(--st-4)"></i><i style="--c:var(--st-5)"></i><i style="--c:var(--st-6)"></i></div>
         <h1>Roofscapes (Re)Powered</h1>
-        <p class="sub">Who can use a big roof's spare solar? Tested on a real Barcelona roof, with every number linked to its source.</p>
+        <p class="sub">A planning service for owners of big roofs: how much solar the roof makes, who nearby can use what the building does not, and what it earns. Tested on a real Barcelona roof, every number linked to its source.</p>
         <p class="team">Breno Sader | Daria Basha | Sindhuja Davuluri</p>
         <p class="studio">IAAC MaAI01 Research Studio 2026-27</p>
       </header>
       <section id="overview">
-        <span class="eyebrow">The question</span>
-        <h2>Who can use this roof's spare solar?</h2>
-        <p class="lede">A big roof often makes more power than its building uses, mostly at weekends and in summer. This tool finds that spare power hour by hour, connects the closest neighbours who can use it, tests whether a battery is worth it with real Barcelona prices, and works out what the roof owner and the neighbours gain.</p>
-        <div class="banner" id="demo-banner" hidden><b>What is assumed</b><span id="demo-note"></span></div>
+        <span class="eyebrow">The service</span>
+        <h2>Share your roof's solar with the neighbours who can use it</h2>
+        <p class="lede">Roofscapes (Re)Powered is for owners and managers of large flat roofs, such as offices and schools that are closed at weekends. You give a building. The service reads its roof, works out how many solar panels fit and how much power they make every hour of the year, and compares that with what the building itself uses. What is left over is spare power. The service then finds the group of nearby buildings that can use the most of it, tests whether a battery pays, and shows what the owner and the neighbours save. The owner pays for the panels and sells only the spare power, at a price below the grid's.</p>
+        <ol class="how" id="how-steps">
+          <li><b>Find the property</b><span>address to building, from Catastro and LiDAR</span></li>
+          <li><b>Measure the roof</b><span>usable area and panel layouts</span></li>
+          <li><b>Simulate the sun</b><span>shade and weather, hour by hour</span></li>
+          <li><b>Compare with use</b><span>how much the building uses, what is spare</span></li>
+          <li><b>Match neighbours</b><span>the best group within reach</span></li>
+          <li><b>Check the money</b><span>battery, owner and neighbours</span></li>
+        </ol>
+        <div id="warnings"></div>
         <div class="stats" id="hero-stats"></div>
         <div class="card">
           <div class="card-head"><h3>What every number is</h3></div>
           <div class="controls">
-            <span class="chip" data-kind="measured">measured</span><span class="small">real data: prices, meters</span>
+            <span class="chip" data-kind="measured">measured</span><span class="small">real data: prices, meters, Catastro</span>
             <span class="chip" data-kind="modelled">modelled</span><span class="small">computed by the pipeline</span>
             <span class="chip" data-kind="assumption">assumption</span><span class="small">a value we chose; listed in Sources</span>
             <span class="chip" data-kind="reported">reported</span><span class="small">published by the real project</span>
           </div>
+        </div>
+      </section>
+
+      <section id="property">
+        <span class="eyebrow">Step 01 · find the property</span>
+        <h2>From an address to a building</h2>
+        <p class="lede">Type an address, a street number or a cadastral reference. The service finds the building in the Spanish Cadastre (Catastro), takes its height and roof shape from LiDAR and checks whether the roof is flat. Below, the properties we have already run.</p>
+        <form class="card" id="search" autocomplete="off">
+          <label class="field" for="addr">Address or cadastral reference
+            <span class="searchrow"><input type="search" id="addr" list="known-props" placeholder="e.g. Camí Antic de València 35, Barcelona"><button type="submit">Look up</button></span>
+          </label>
+          <datalist id="known-props"></datalist>
+          <div class="controls" id="known-buttons"></div>
+          <p class="note" id="search-msg" aria-live="polite"></p>
+        </form>
+        <div class="card" id="prop-card" hidden>
+          <div class="card-head"><h3 id="prop-title"></h3><span class="chip" data-kind="measured" id="prop-chip">measured · Catastro, ICGC</span></div>
+          <dl class="facts" id="prop-facts"></dl>
+          <div id="prop-warn"></div>
+        </div>
+        <div class="card">
+          <div class="card-head"><h3>Known gaps in this step, and what to do about them</h3></div>
+          <div class="table-wrap"><table id="gaps-table"></table></div>
         </div>
       </section>
 
@@ -81,6 +113,22 @@
             <p class="small" id="panel-note"></p>
           </div>
         </div>
+        <div class="card" id="how-card">
+          <div class="card-head"><h3>How this layout was made</h3><span class="chip" data-kind="assumption">assumption · block rules</span></div>
+          <ol class="note steps-list">
+            <li><b>Fit.</b> Panel rows are laid on the usable roof, as many as fit.</li>
+            <li><b>Shade.</b> Panels that lose more than 40% of their sun to shade are dropped.</li>
+            <li><b>Cut-off.</b> Neat and best layouts drop panels below 85% / 93% of the roof's best panel (<i>weak</i>).</li>
+            <li><b>Blocks.</b> Of the rest, only big enough rectangles are kept: at least 12 m² (neat) or 16 m² (best), at least 2 panels wide both ways, whichever way they run. Good panels outside such a block are dropped (<i>loose</i>).</li>
+          </ol>
+          <div id="funnel"></div>
+          <div class="legend" id="funnel-legend"></div>
+        </div>
+        <div class="card" id="compare-card" hidden>
+          <div class="card-head"><h3>Another tool's panel plan, for comparison</h3></div>
+          <img id="compare-img" alt="Panel plan from another tool for the same roof" loading="lazy">
+          <p class="small" id="compare-caption"></p>
+        </div>
         <div class="card">
           <div class="card-head"><h3>All layouts side by side</h3><span class="chip" data-kind="assumption">assumption · block rules</span></div>
           <div class="table-wrap"><table id="layout-table"></table></div>
@@ -101,7 +149,7 @@
 
       <section id="neighbours">
         <span class="eyebrow" id="nb-eyebrow">Steps 05-07 · neighbours</span>
-        <h2>Who uses power when the roof has it</h2>
+        <h2>Which buildings use the solar</h2>
         <p class="lede" id="nb-lede"></p>
         <div class="card">
           <div class="card-head">
@@ -114,6 +162,16 @@
           <div id="profiles"></div>
           <div class="legend" id="profiles-legend"></div>
           <p class="small">Building use is <span class="chip" data-kind="assumption">assumption</span> (step 05 profiles from floor area and use type) until we have meter data. Solar is the mean of June-August for weekdays and weekends alike.</p>
+        </div>
+        <div class="card" id="match-card" hidden>
+          <div class="card-head">
+            <h3>Best group of buildings (steps 07 + 08, one optimiser)</h3>
+            <div class="seg" role="group" aria-label="Sharing mode" id="matchmode"></div>
+          </div>
+          <p class="note" id="match-what"></p>
+          <div class="stats" id="match-stats"></div>
+          <div class="table-wrap"><table id="match-table"></table></div>
+          <p class="small" id="match-note"></p>
         </div>
         <div class="grid2">
           <div class="card">
@@ -149,7 +207,7 @@
 
       <section id="battery">
         <span class="eyebrow">Steps 06-08 · battery at the host</span>
-        <h2>Is a battery worth it?</h2>
+        <h2>Battery sizing</h2>
         <p class="big-answer" id="battery-answer"></p>
         <div class="card">
           <div class="card-head">

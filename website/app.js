@@ -110,7 +110,15 @@
   // ---- sections ---------------------------------------------------------------
   function overview(D) {
     const F = D.facts;
-    if (D.meta.demo) { $("demo-banner").hidden = false; $("demo-note").textContent = D.meta.note; }
+    // every warning says what is wrong AND what we need to look at or change
+    const wbox = $("warnings");
+    for (const w of D.warnings || []) {
+      const b = el("div", { class: "banner" }, wbox);
+      el("b", { text: "Check" }, b);
+      const t = el("span", {}, b);
+      t.appendChild(document.createTextNode(w.text + " "));
+      if (w.next) el("em", { class: "next", text: "Next: " + w.next }, t);
+    }
     const stats = [
       ["Solar a year", F.solar_kwh, fmt(F.solar_kwh.v), "kWh"],
       ["Used by the host alone", F.host_self_share, pct(F.host_self_share.v), ""],
@@ -127,11 +135,140 @@
     }
   }
 
+  function norm(t) { return String(t || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z0-9 ]/g, " ").replace(/\s+/g, " ").trim(); }
+  const USE = { "4_3_publicServices": "Public services", "4_1_office": "Office", "1_residential": "Residential", "3_industrial": "Industrial", "4_2_retail": "Retail" };
+
+  function property(D) {
+    const S = D.step01 || { properties: [], gaps: [] };
+    const known = S.properties;
+    const dl = $("known-props"), kb = $("known-buttons"), msg = $("search-msg"), card = $("prop-card");
+    for (const r of known) {
+      el("option", { value: r.query }, dl);
+      const b = el("button", { type: "button", class: "pill", text: (r.query || r.catastro_address).replace(/, Barcelona$/, "") }, kb);
+      b.addEventListener("click", () => { $("addr").value = r.query; show(r); });
+    }
+    function field(dlist, k, v, src) {
+      const box = el("div", {}, dlist);
+      el("dt", { text: k }, box);
+      const dd = el("dd", {}, box);
+      dd.appendChild(document.createTextNode(v == null || v === "" ? "–" : v));
+      if (src) el("small", { text: src }, dd);
+    }
+    function show(r) {
+      card.hidden = false;
+      $("prop-title").textContent = r.query + " · " + (r.analysed ? "analysed in steps 02-10" : "step 01 only");
+      const f = $("prop-facts");
+      f.replaceChildren();
+      const rf = r.roof || {};
+      field(f, "Address in Catastro", r.catastro_address, "Catastro");
+      field(f, "Cadastral reference", r.refcat, "Catastro");
+      field(f, "Coordinates", r.lat != null ? `${r.lat.toFixed(5)}, ${r.lon.toFixed(5)}` : null, r.geocoder ? "geocoder: " + r.geocoder : "");
+      field(f, "Year built", r.year_built, "Catastro");
+      field(f, "Current use", USE[r.current_use] || r.current_use, "Catastro");
+      field(f, "Dwellings", r.dwellings, "Catastro");
+      field(f, "Height", r.building_height_m != null ? fmt(r.building_height_m, 1) + " m" : null, r.height_source ? "from " + r.height_source.replace("lidar", "LiDAR") : "");
+      field(f, "Footprint", r.footprint_area_m2 != null ? fmt(r.footprint_area_m2, 0) + " m²" : null, "Catastro");
+      field(f, "LiDAR sheets", (r.lidar_tiles || []).map((t) => (t.match(/1km(\d+)/) || [, t])[1]).join(", "), "ICGC Territorial LiDAR");
+      field(f, "Flat roof", r.flat_roof == null ? null : (r.flat_roof ? "yes" : "no") + (rf.flat_share != null ? `: ${pct(rf.flat_share)} of cells under 5°, median slope ${fmt(rf.median_slope_deg, 1)}°` : ""), "modelled from LiDAR");
+      field(f, "Roof height range", rf.roof_height_min != null ? `${fmt(rf.roof_height_min, 1)} to ${fmt(rf.roof_height_max, 1)} m` : null, "LiDAR");
+      field(f, "Heritage protected", r.heritage_protected == null ? "unknown, not checked yet" : (r.heritage_protected ? "yes" : "no"), "see gaps below");
+      const w = $("prop-warn");
+      w.replaceChildren();
+      for (const t of r.warnings || []) {
+        const b = el("div", { class: "banner" }, w);
+        el("b", { text: "Check" }, b);
+        const sp = el("span", {}, b);
+        sp.appendChild(document.createTextNode(t + " "));
+        el("em", { class: "next", text: "Next: decide whether to relax the flat-roof limit or lay panels on the flat parts only (see gaps)." }, sp);
+      }
+      if (!r.analysed) {
+        const b = el("div", { class: "banner" }, w);
+        el("b", { text: "Check" }, b);
+        const sp = el("span", {}, b);
+        sp.appendChild(document.createTextNode("Only step 01 has been run for this property. "));
+        el("em", { class: "next", text: "Next: run steps 02-10 for it (commands in pipeline/README.md); the rest of this page shows " + D.meta.case + "." }, sp);
+      }
+      if (r.about) el("p", { class: "small", text: r.about }, w);
+    }
+    $("search").addEventListener("submit", (e) => {
+      e.preventDefault();
+      const q = norm($("addr").value);
+      if (!q) { msg.textContent = "Type an address or a cadastral reference."; return; }
+      const hit = known.find((r) => [r.query, r.catastro_address, r.refcat].some((t) => norm(t).includes(q) || q.includes(norm(t))))
+        || known.find((r) => q.split(" ").filter((w) => w.length > 2).every((w) => norm(r.query + " " + r.catastro_address).includes(w)));
+      if (hit) { msg.textContent = ""; show(hit); return; }
+      card.hidden = true;
+      msg.textContent = `We have not run "${$("addr").value}" yet. This page cannot call Catastro or ICGC itself, so run step 01 on a laptop: ${S.run_command}. Then add the building.json with export_site_data --property.`;
+    });
+    const g = $("gaps-table");
+    const hr = el("tr", {}, el("thead", {}, g));
+    for (const h of ["Gap", "Where it stands", "What to do next"]) el("th", { text: h }, hr);
+    const tb = el("tbody", {}, g);
+    for (const x of S.gaps) {
+      const r = el("tr", {}, tb);
+      el("td", { text: x.gap }, r); el("td", { text: x.status }, r); el("td", { text: x.next }, r);
+    }
+    const first = known.find((r) => r.analysed) || known[0];
+    if (first) { $("addr").value = first.query; show(first); }
+  }
+
+  function match(D) {
+    const M = D.match || {};
+    const modes = Object.keys(M);
+    if (!modes.length) return;
+    $("match-card").hidden = false;
+    const label = { wired: "Wired directly (any city)", legal: "Spanish legal: fixed shares, no cable" };
+    const state = { mode: modes.includes("wired") ? "wired" : modes[0] };
+    const seg = $("matchmode");
+    seg.replaceChildren();
+    for (const m of modes) {
+      const b = el("button", { type: "button", "aria-pressed": String(m === state.mode), text: label[m] || m }, seg);
+      b.addEventListener("click", () => { state.mode = m; for (const x of seg.children) x.setAttribute("aria-pressed", String(x === b)); draw(); });
+    }
+    function draw() {
+      const R = M[state.mode], b = R.best, a = R.host_alone;
+      $("match-what").textContent = `${R.what[0].toUpperCase() + R.what.slice(1)}. Reach used here: ${fmt(R.reach_m)} m. ${fmt(R.candidates.length)} buildings were in reach; ${fmt(R.tried)} groups of them were tried${R.exhaustive ? " (every possible group)" : " (local search)"}. The winner wastes the least solar, then earns the owner the most. A building only counts if it adds at least ${fmt(R.min_gain_kwh)} kWh a year, and a group has at most ${R.max_guests} guests.`;
+      const st = $("match-stats");
+      st.replaceChildren();
+      for (const [l, v, u] of [["Solar used, host alone", pct(a.used_share), ""], ["Solar used, best group", pct(b.used_share), ""],
+        ["Sent to the grid, best group", fmt(b.to_grid_kwh), "kWh"], ["Owner earns, best group", "€" + fmt(b.owner_eur), "a year"]]) {
+        const s2 = el("div", { class: "stat" }, st);
+        el("span", { class: "label", text: l }, s2);
+        const vv = el("span", { class: "value", text: v }, s2);
+        if (u) el("small", { text: u }, vv);
+        s2.appendChild(chip({ kind: "modelled", src: "steps 07-08", note: "optimise.py" }));
+      }
+      const t = $("match-table");
+      t.replaceChildren();
+      const hr = el("tr", {}, el("thead", {}, t));
+      ["Group", "Used", "To the grid", "Owner €/yr", "Guests save €/yr"].forEach((h, i) => el("th", { text: h, class: i ? "n" : "" }, hr));
+      const tb = el("tbody", {}, t);
+      const nm = (id) => { const c = R.candidates.find((x) => x.building_id === id); return (c && (c.name || c.building_id)) || id; };
+      const rows = [{ buildings: [], ...a, used_share: a.used_share }, ...R.top.slice(0, 6)];
+      rows.forEach((g, i) => {
+        const r = el("tr", { class: i === 1 ? "pick" : "" }, tb);
+        el("td", { text: i === 0 ? "Host alone" : g.buildings.map(nm).join(" + ") }, r);
+        el("td", { class: "n", text: pct(g.used_share) }, r);
+        el("td", { class: "n", text: fmt(g.to_grid_kwh) + " kWh" }, r);
+        el("td", { class: "n", text: "€" + fmt(g.owner_eur) }, r);
+        el("td", { class: "n", text: i === 0 ? "–" : "€" + fmt(g.guests_save_eur) }, r);
+      });
+      $("match-note").textContent = "Each building in the best group adds: " + b.marginal.map((m) => `${nm(m.building)} ${fmt(m.adds_kwh)} kWh`).join(", ") + " a year. Building use is an estimate, not meters. " +
+        (state.mode === "legal" ? "Fixed shares are our simple rule (use in sunny hours); CEP9's real shares are not published." : "");
+    }
+    draw();
+  }
+
   function roof(D) {
     const F = D.facts;
     const addr = D.roof.address || D.meta.address, usable = D.roof.usable_m2 != null ? D.roof.usable_m2 : F.usable_m2.v;
     $("roof-lede").textContent = `${addr}: ${fmt(usable)} m² of usable roof, read from ICGC LiDAR, with the sun from a PVGIS typical year. Pick how many panels to install: fill the whole roof, or only neat blocks of the best panels, as real installers do.` +
-      (D.roof.separate ? ` This section shows a real roof; the sections below still use the demo roof (${D.meta.address}) until this one has been run through steps 04-09.` : "");
+      (D.roof.separate ? ` This section shows another roof than the sections below (${D.meta.address}).` : "");
+    if (D.compare && D.compare.file) {
+      $("compare-card").hidden = false;
+      $("compare-img").src = /^(data:|https?:)/.test(D.compare.file) ? D.compare.file : "data/" + D.compare.file;
+      $("compare-caption").textContent = D.compare.caption;
+    }
     const V = D.roof.variants && D.roof.variants.length ? D.roof.variants : [{
       option: "max", name: "Fill the roof", panel_wp: 420, rule: "every panel that fits and loses at most 40% of its sun to shade",
       panels: F.panels.v, kwp: F.kwp.v, yearly_kwh: F.solar_kwh.v, kwh_per_kwp: F.kwh_per_kwp.v,
@@ -176,7 +313,7 @@
       return [v, r];
     });
     const usedV = V.find((v) => v.option === chosen.option && v.panel_wp === chosen.panel_wp);
-    $("layout-used").textContent = D.roof.separate ? `The sections below use the demo roof, not this one, until this roof goes through steps 04-10. Block sizes and the share of the best panel are our assumptions (step 03, options.py); 540 W panel size is a typical catalogue panel.` : `The rest of this page (spare power, neighbours, battery and money) uses ${usedV ? usedV.name.toLowerCase() + " with " + usedV.panel_wp + " W panels" : "the pipeline's layout"}. To use another layout there, rerun step 03 with --layout and --panel-wp, then steps 04-10. Block sizes and the share of the best panel are our assumptions (step 03, options.py); 540 W panel size is a typical catalogue panel.`;
+    $("layout-used").textContent = (D.roof.separate ? `The sections below use another roof (${D.meta.address}).` : `The rest of this page (spare power, neighbours, battery and money) uses ${usedV ? usedV.name.toLowerCase() + " with " + usedV.panel_wp + " W panels" : "the pipeline's layout"}.`) + ` Block sizes and the share of the best panel are our assumptions (step 03, options.py); 540 W panel size is a typical catalogue panel. Next: to see the money for another layout, run steps 03-10 with --layout and --panel-wp for it.`;
 
     function draw() {
       const v = pick();
@@ -229,11 +366,12 @@
         r.addEventListener("pointermove", show); r.addEventListener("focus", (e) => show({ clientX: e.target.getBoundingClientRect().x, clientY: e.target.getBoundingClientRect().y }));
         r.addEventListener("pointerleave", hideTip); r.addEventListener("blur", hideTip);
       });
-      $("panels-key").textContent = v.actual ? "outlined = real panel blocks" : "darker = produces more";
+      $("panels-key").textContent = v.actual ? "outlined = real panel blocks" : "darker = produces more; grey = left out";
+      $("how-card").hidden = !!v.actual;
       if (v.actual) { drawActual(v); return; }
       // panel drawing: same frame for every layout, same colours for every layout of one panel model
       const all = V.flatMap((x) => x.panel_list);
-      const pts = all.flatMap((p) => p.c || [[p.x, p.y]]);
+      const pts = [...all.flatMap((p) => p.c || [[p.x, p.y]]), ...V.flatMap((x) => (x.left_out || []).flatMap((p) => p.c))];
       const xs = pts.map((q) => q[0]), ys = pts.map((q) => q[1]);
       const ks = V.filter((x) => x.panel_wp === v.panel_wp).flatMap((x) => x.panel_list.map((p) => p.k));
       const x0 = Math.min(...xs) - 2, x1 = Math.max(...xs) + 2, y0 = Math.min(...ys) - 2, y1 = Math.max(...ys) + 2;
@@ -243,6 +381,13 @@
       const kmin = Math.min(...ks), kmax = Math.max(...ks);
       const seq = ["--seq-2", "--seq-3", "--seq-4", "--seq-5"].map(css);
       const X = (x) => 10 + (x - x0) * scale, Y = (y) => 10 + (y1 - y) * scale;
+      // panels this layout drops, with the reason, drawn first so the kept ones sit on top
+      for (const p of v.left_out || []) {
+        const weak = p.why === "weak";
+        const r = el("path", { d: "M" + p.c.map((q) => X(q[0]).toFixed(1) + "," + Y(q[1]).toFixed(1)).join("L") + "Z", fill: weak ? css("--off-weak") : css("--off-loose"), stroke: css("--panel"), "stroke-width": 0.6 }, g.svg);
+        r.addEventListener("pointermove", (evt) => showTip(evt, "Left out", [{ value: weak ? "weak" : "loose", label: weak ? "below this layout's cut-off" : "good, but in no big enough block" }]));
+        r.addEventListener("pointerleave", hideTip);
+      }
       for (const p of v.panel_list) {
         const tt = kmax > kmin ? (p.k - kmin) / (kmax - kmin) : 1;
         const c = seq[Math.min(3, Math.floor(tt * 4))];
@@ -252,9 +397,38 @@
         r.addEventListener("pointermove", (evt) => showTip(evt, "Panel", [{ value: fmt(p.k) + " kWh/yr", label: "" }]));
         r.addEventListener("pointerleave", hideTip);
       }
+      drawFunnel(v);
       const vk = v.panel_list.map((p) => p.k);
-      $("panel-note").textContent = v.panels ? `${fmt(Math.min(...vk))} to ${fmt(Math.max(...vk))} kWh a year per panel. Tilt ${fmt(D.roof.tilt_deg)}°, mean shade loss ${pct(v.mean_shade_loss)}.` : "No block on this roof is big enough for this layout.";
+      $("panel-note").textContent = v.panels ? `${fmt(Math.min(...vk))} to ${fmt(Math.max(...vk))} kWh a year per panel. Tilt ${fmt(D.roof.tilt_deg)}°, mean shade loss ${pct(v.mean_shade_loss)}.` : "No block on this roof is big enough for this layout. Next: try the other panel size, or check whether the block rules in options.py are too strict for this roof.";
     }
+    function drawFunnel(v) {
+      const host = $("funnel"), lg = $("funnel-legend");
+      host.replaceChildren(); lg.replaceChildren();
+      const fn = v.funnel;
+      if (!fn) {
+        host.textContent = "The step-by-step numbers for this layout are not in the data yet. Next: rerun step 03 (shade_yield) and step 10 so every layout carries its panel counts and the reasons panels were dropped.";
+        host.className = "note";
+        return;
+      }
+      host.className = "";
+      const rows = [["Fit on the roof", fn.fit, "--solar"], ["Dropped: too shaded", -fn.shaded_out, "--grid-ink"],
+        ["Dropped: weak (below cut-off)", -fn.weak, "--off-weak"], ["Dropped: loose (in no big enough block)", -fn.loose, "--off-loose"], ["Kept", fn.kept, "--st-3"]];
+      const max = Math.max(1, fn.fit);
+      for (const [label, n, col] of rows) {
+        const r = el("div", { class: "frow" }, host);
+        el("span", { class: "flabel", text: label }, r);
+        const bar = el("span", { class: "fbar" }, r);
+        const i = el("i", {}, bar);
+        i.style.width = (Math.abs(n) / max * 100) + "%"; i.style.background = css(col);
+        el("b", { class: "num", text: (n > 0 ? "" : n < 0 ? "−" : "") + fmt(Math.abs(n)) }, r);
+      }
+      for (const [col, t] of [["--off-weak", "weak: below the cut-off"], ["--off-loose", "loose: good, but in no big enough block"]]) {
+        const sp = el("span", {}, lg);
+        const sw = el("i", {}, sp); sw.style.background = css(col);
+        sp.appendChild(document.createTextNode(t));
+      }
+    }
+
     function drawActual(v) {
       const host = $("panels");
       const ph = v.photo, b = ph ? ph.bounds_25831 : null;
@@ -325,7 +499,7 @@
 
   const BCOL = ["--s1", "--s2", "--s3", "--s7"];
   function neighbours(D) {
-    $("nb-eyebrow").textContent = `Steps 05-07 · neighbours within ${fmt(D.max_distance_m)} m`;
+    $("nb-eyebrow").textContent = `Steps 05-08 · buildings within ${fmt(D.max_distance_m)} m`;
     $("nb-lede").textContent = D.meta.reach_note || `Guests are wired directly to the host, so the tool only looks within ${fmt(D.max_distance_m)} m and takes the closest buildings that can use some of the spare solar.`;
     const B = D.buildings;
     const colors = B.map((_, i) => css(BCOL[i] || "--ink-3"));
@@ -608,7 +782,7 @@
   }
 
   function start(D) {
-    for (const fn of [overview, roof, surplus, neighbours, prices, battery, money, agreed, sources]) {
+    for (const fn of [overview, property, roof, surplus, neighbours, match, prices, battery, money, agreed, sources]) {
       try { fn(D); } catch (err) { console.error(fn.name, err); }
     }
     trackSteps();

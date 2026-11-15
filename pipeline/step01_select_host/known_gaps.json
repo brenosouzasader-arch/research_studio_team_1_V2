@@ -1,0 +1,32 @@
+[
+ {
+  "gap": "Services not yet tested on many buildings",
+  "status": "Partly resolved. Run live on 15 Nov 2026 from a laptop: the CEP9 school and the A160 office were found, geocoded and read from Catastro, ICGC and LiDAR without errors. Catastro returned no building outline for 2 CEP9 members (Institut Maria Espinalt, Llevant fire station).",
+  "next": "Find out why those two have no outline (try their cadastral reference directly instead of the point), then run smoke_test.py on 10 more Poblenou buildings."
+ },
+ {
+  "gap": "Catastro address differs from the address you typed",
+  "status": "The CEP9 school was typed as Camí Antic de València 35 and Catastro lists it as CL BILBAO 103. Both are the same building (the plot has two street fronts).",
+  "next": "Show both addresses in the result, and add a map tap check so the user can confirm the right building."
+ },
+ {
+  "gap": "Heritage protection is unknown (flag stays empty)",
+  "status": "The city's protected-heritage catalogue exists as open data (Open Data BCN, CC BY 4.0, 3 resources) but we have not downloaded it, so heritage_protected is null.",
+  "next": "On a laptop: download the dataset, check which file has a cadastral reference or a polygon, and pass it with --heritage."
+ },
+ {
+  "gap": "Plots with several buildings",
+  "status": "The code picks the building containing the point, or else the largest one, and adds a warning. Not yet tested on a plot with several roofs.",
+  "next": "Test on one such plot in Poblenou and let the user choose the building from a list."
+ },
+ {
+  "gap": "Floors = highest building part",
+  "status": "For blocks with a set-back top floor, the count includes the extension. Floors only feed the demand estimate of step 05, not the roof.",
+  "next": "Compare Catastro floors with LiDAR height for 10 buildings and fix any that are far off."
+ },
+ {
+  "gap": "Flat-roof check rejects roofs that are mostly sloped",
+  "status": "A160 reads 33% flat cells (limit 70%), so it is flagged 'not flat: outside the tool's scope', although it still produced 219 panels.",
+  "next": "Decide whether to relax the 70% limit or to lay panels on the flat parts only."
+ }
+]

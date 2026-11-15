@@ -62,6 +62,7 @@ class Layout:
     tilt_deg: float
     module: Module = DEFAULT_MODULE
     cells: list = None     # (row, column) of each panel in the layout grid; rows run along the building
+    orientation_table: list = None   # what --orient search tried: azimuth, panels, yield factor, score
 
     @property
     def count(self):
@@ -75,7 +76,7 @@ class Layout:
         """A new Layout with only the panels where keep is True."""
         cells = None if self.cells is None else [c for c, k in zip(self.cells, keep) if k]
         return Layout([p for p, k in zip(self.panels, keep) if k], self.azimuth_deg, self.tilt_deg,
-                      self.module, cells)
+                      self.module, cells, self.orientation_table)
 
     def centres(self):
         return np.array([[p.centroid.x, p.centroid.y] for p in self.panels]).reshape(-1, 2)
@@ -131,3 +132,51 @@ def lay_out(usable, footprint, tilt_deg=TILT_DEG, azimuth_deg=None, module=DEFAU
                 best_cells = [c for c, k in zip(cells, ok) if k]
     panels = [affinity.rotate(p, -rot, origin=centre) for p in best]
     return Layout(panels, az, tilt_deg, module, best_cells)
+
+
+ORIENT_SPAN_DEG = 45       # --orient search tries the building's axis +/- this much, in steps of ORIENT_STEP_DEG
+ORIENT_STEP_DEG = 5
+
+
+def yield_factor(azimuth_deg, tilt_deg=TILT_DEG):
+    """Rough share of the best-orientation (due south) yearly sun a panel gets when it faces
+    azimuth_deg. ASSUMPTION: loss = 0.5 x sin(tilt) x (1 - cos(angle away from south)); at 10 degrees of
+    tilt and 45 degrees off south that is 2.5%. It only ranks orientations here; the real yield
+    comes from step 03's hour-by-hour model once an orientation is chosen."""
+    off = math.radians(((azimuth_deg - 180) + 180) % 360 - 180)
+    return 1 - 0.5 * math.sin(math.radians(tilt_deg)) * (1 - math.cos(off))
+
+
+def orientation_table(usable, footprint, tilt_deg=TILT_DEG, module=DEFAULT_MODULE,
+                      span=ORIENT_SPAN_DEG, step=ORIENT_STEP_DEG):
+    """Lay the panels out at several orientations around the building's own axis (and due south) and
+    score each by panels x yield factor. Rows turned a few degrees can fit more panels, but panels
+    turned away from south make less, so the score weighs both. Returns the table, best first."""
+    base = facing_azimuth(footprint)
+    azs = {round((base + off) % 360, 1): off for off in range(-span, span + 1, step)}
+    azs.setdefault(180.0, round(180.0 - base))
+    rows = []
+    for az, off in sorted(azs.items(), key=lambda kv: kv[1]):
+        lay = lay_out(usable, footprint, tilt_deg, az, module)
+        f = yield_factor(az, tilt_deg)
+        rows.append({"azimuth_deg": az, "offset_from_building_deg": off, "panels": lay.count,
+                     "yield_factor": round(f, 4), "score": round(lay.count * f, 1),
+                     "is_building_axis": off == 0, "is_south": az == 180.0})
+    return sorted(rows, key=lambda r: -r["score"])
+
+
+def lay_out_oriented(usable, footprint, mode="building", tilt_deg=TILT_DEG, module=DEFAULT_MODULE):
+    """mode: 'building' = rows along the building edge nearest south (the default since V1),
+    'south' = rows facing due south, 'search' = the best of orientation_table()."""
+    if mode == "building":
+        return lay_out(usable, footprint, tilt_deg, None, module)
+    if mode == "south":
+        return lay_out(usable, footprint, tilt_deg, 180.0, module)
+    if mode != "search":
+        raise SystemExit(f"unknown orientation {mode}; choose building, south or search")
+    if usable is None or usable.is_empty:
+        return lay_out(usable, footprint, tilt_deg, None, module)
+    table = orientation_table(usable, footprint, tilt_deg, module)
+    lay = lay_out(usable, footprint, tilt_deg, table[0]["azimuth_deg"], module)
+    lay.orientation_table = table
+    return lay

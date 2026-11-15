@@ -1,0 +1,33 @@
+{
+ "query": "Camí Antic de València 35, Barcelona",
+ "lat": 41.40458605,
+ "lon": 2.20067448,
+ "geocoder": "ICGC",
+ "refcat": "3241427DF3834A",
+ "catastro_address": "CL BILBAO 103 BARCELONA (BARCELONA)",
+ "building_id": "3241427DF3834A",
+ "year_built": 2008,
+ "current_use": "4_3_publicServices",
+ "dwellings": 0,
+ "building_height_m": 13.1,
+ "height_source": "lidar",
+ "footprint_area_m2": 1422.5,
+ "lidar_tiles": [
+  "lidar-territorial-v3r1-full1km433583-2021-2023.laz",
+  "lidar-territorial-v3r1-full1km433584-2021-2023.laz"
+ ],
+ "roof": {
+  "is_flat": true,
+  "flat_share": 0.803,
+  "median_slope_deg": 1.6,
+  "roof_height_min": 7.21,
+  "roof_height_max": 16.87,
+  "points": 5728,
+  "note": null
+ },
+ "flat_roof": true,
+ "heritage_protected": null,
+ "heritage_details": null,
+ "warnings": [],
+ "_about": "step 01 output (building.json) for the CEP9 school, run 15 Nov 2026 BEFORE the LiDAR class fix, so height and roof figures may change on a rerun"
+}

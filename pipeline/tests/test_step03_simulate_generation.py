@@ -201,8 +201,32 @@ def test_blocks_are_rectangles_and_drop_stragglers():
     # a 3 x 6 block of good panels, plus one lonely panel and a 1 x 2 stub
     cells = [(r, c) for r in range(3) for c in range(6)] + [(5, 0), (5, 8), (5, 9)]
     good = np.ones(len(cells), bool)
-    found = layout_options.blocks(cells, good, min_row=3, min_panels=6)
+    found = layout_options.blocks(cells, good, min_short=2, min_long=2, min_panels=6)
     assert len(found) == 1 and len(found[0]) == 18
+
+
+def test_a_block_counts_the_same_whichever_way_it_runs():
+    wide = [(r, c) for r in range(2) for c in range(3)]      # 2 rows x 3 columns
+    tall = [(r, c) for r in range(3) for c in range(2)]      # 3 rows x 2 columns
+    for cells in (wide, tall):
+        assert len(layout_options.blocks(cells, np.ones(6, bool), 2, 2, 6)) == 1
+    assert layout_options.blocks([(0, c) for c in range(6)], np.ones(6, bool), 2, 2, 6) == []   # 1 x 6 is a strip
+
+
+def test_block_size_is_an_area_so_big_panels_need_fewer():
+    neat = layout_options.OPTIONS[1]
+    small = layout_options.min_cells(neat, 1.76 * 1.13)      # 420 W
+    big = layout_options.min_cells(neat, 2.28 * 1.13)        # 540 W
+    assert small == 6 and big == 5
+
+
+def test_classify_says_why_a_panel_was_left_out():
+    cells = [(r, c) for r in range(2) for c in range(6)] + [(5, 0)]
+    kwh = np.full(len(cells), 600.0)
+    kwh[-1] = 300.0                                          # a weak panel on its own
+    kwh[:0] = 0
+    keep, n, weak = layout_options.classify(cells, kwh, layout_options.OPTIONS[1])
+    assert n == 1 and keep.sum() == 12 and weak[-1] and not weak[:12].any()
 
 
 def test_weak_panels_are_left_out_of_best_blocks():

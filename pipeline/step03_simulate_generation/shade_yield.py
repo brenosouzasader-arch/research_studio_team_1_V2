@@ -37,7 +37,7 @@ from shapely.ops import unary_union
 from step01_select_host.find_building import find_building
 from step02_pv_capacity.lidar_roof import read_roof_from_tiles
 from step02_pv_capacity.read_roof import lidar_only
-from step02_pv_capacity.layout import DEFAULT_MODULE, MODULES, Layout, get_module, lay_out
+from step02_pv_capacity.layout import DEFAULT_MODULE, MODULES, Layout, get_module, lay_out_oriented
 
 from .energy import yield_for_layout
 from .horizon import horizons, surface_model
@@ -85,14 +85,14 @@ def usable_geojson(usable):
 
 
 def analyse(lroof, footprint, laz_dir, weather, lat, lon, usable=None, max_shade_loss=MAX_SHADE_LOSS,
-            max_panels=None, module=DEFAULT_MODULE, surface=None):
+            max_panels=None, module=DEFAULT_MODULE, surface=None, orient="building"):
     """Steps 3 + 4 for one roof and one panel model. Returns (kept layout, yearly kWh
     per kept panel, shade loss per kept panel, hourly kWh of the kept panels, dropped
     panels, hourly kWh of each kept panel as an (n_panels, n_hours) array).
     surface: (grid, dsm) from surface_model, to reuse it across panel models."""
     if usable is None:
         usable = lroof.grid.cells_to_polygon(lroof.usable)
-    layout = lay_out(usable, footprint, module=module)
+    layout = lay_out_oriented(usable, footprint, orient, module=module)
     if not layout.count:
         return layout, np.zeros(0), np.zeros(0), np.zeros(len(weather)), [], np.zeros((0, len(weather)))
     grid, dsm = surface if surface is not None else surface_model(footprint, laz_dir)
@@ -106,15 +106,23 @@ def analyse(lroof, footprint, laz_dir, weather, lat, lon, usable=None, max_shade
 
 def variants_for(layout, kwh, per_panel, weather):
     """The three layout options (options.py) for one analysed layout.
-    Returns a list of (option dict, keep mask, number of blocks, hourly kWh)."""
+    Returns a list of (option dict, keep mask, number of blocks, hourly kWh, weak mask).
+    The block areas are judged with this panel model's size, so a 540 W panel needs fewer panels."""
     cells = layout.cells if layout.cells is not None else [(0, i) for i in range(layout.count)]
-    chosen = all_options(cells, kwh)
+    chosen = all_options(cells, kwh, layout.module.long_m * layout.module.short_m)
     out = []
     for o in OPTIONS:
-        keep, n_blocks = chosen[o["id"]]
+        keep, n_blocks, weak = chosen[o["id"]]
         hourly = per_panel[keep].sum(axis=0) if keep.any() else np.zeros(len(weather))
-        out.append((o, keep, n_blocks, hourly))
+        out.append((o, keep, n_blocks, hourly, weak))
     return out
+
+
+def left_out(layout, keep, weak):
+    """Panels the option does not keep, with the reason: 'weak' (below its cut-off) or 'loose'
+    (good, but not inside a big enough block). For the website to draw them."""
+    return [{"c": corners(p), "why": "weak" if w else "loose"}
+            for p, k, w in zip(layout.panels, keep, weak) if not k]
 
 
 def corners(p):
@@ -200,7 +208,7 @@ def options_png(fp, usable, items, path):
 
 def shade_yield(laz_dir, address=None, lat=None, lon=None, usable_path=None,
                 weather_path=DEFAULT_PATH, out="roof", max_shade_loss=MAX_SHADE_LOSS, max_panels=None,
-                panel_wp=420, layout_option="max", compare_wp=None):
+                panel_wp=420, layout_option="max", compare_wp=None, orient="building"):
     """Steps 3 + 4. panel_wp and layout_option pick the layout the main outputs use;
     compare_wp lists the panel wattages to work the three options out for (default: panel_wp only)."""
     if layout_option not in {o["id"] for o in OPTIONS}:
@@ -224,14 +232,17 @@ def shade_yield(laz_dir, address=None, lat=None, lon=None, usable_path=None,
         usable_file = f"{out}_usable.geojson"
         Path(usable_file).write_text(json.dumps(usable_fc), encoding="utf-8")
 
-    variants, main = [], None
+    variants, main, orient_table = [], None, None
     for wp in wps:
         mod = MODULES[wp]
         full, kwh, loss, _, dropped, per_panel = analyse(
             lroof, fp, laz_dir, weather, record.lat, record.lon, usable, max_shade_loss, max_panels,
-            module=mod, surface=surface if surface[0] is not None else None)
+            module=mod, surface=surface if surface[0] is not None else None, orient=orient)
+        if full.orientation_table and wp == module.wp:
+            orient_table = full.orientation_table
         pics = []
-        for o, keep, n_blocks, hourly in variants_for(full, kwh, per_panel, weather):
+        fits = full.count + len(dropped)
+        for o, keep, n_blocks, hourly, weak in variants_for(full, kwh, per_panel, weather):
             lay = full.subset(keep)
             summary = summarise(lay, kwh[keep], loss[keep], hourly, weather)
             hourly_file = f"{out}_hourly_{wp}_{o['id']}.csv"
@@ -239,6 +250,10 @@ def shade_yield(laz_dir, address=None, lat=None, lon=None, usable_path=None,
             variants.append({
                 "panel_wp": wp, "panel": mod.label, "option": o["id"], "name": o["name"], "rule": o["rule"],
                 "blocks": n_blocks, **summary, "hourly_file": hourly_file,
+                "funnel": {"fit": fits, "shaded_out": len(dropped), "after_shade": full.count,
+                           "weak": int((weak & ~keep).sum()), "loose": int((~weak & ~keep).sum()),
+                           "kept": int(keep.sum())},
+                "left_out": left_out(full, keep, weak),
                 "panel_list": [{"x": round(p.centroid.x, 2), "y": round(p.centroid.y, 2),
                                 "kwh_year": round(float(k), 1), "corners": corners(p)}
                                for p, k in zip(lay.panels, kwh[keep])]})
@@ -262,6 +277,7 @@ def shade_yield(laz_dir, address=None, lat=None, lon=None, usable_path=None,
                     "kwh_year": round(float(k), 1), "shade_loss": round(float(s), 3)}
                    for p, k, s in zip(layout.panels, kwh, loss)],
         "variants": variants,
+        "orientation": {"mode": orient, "azimuth_deg": round(layout.azimuth_deg, 1), "tried": orient_table},
     }
     Path(f"{out}_yield.json").write_text(json.dumps(result, indent=2, default=str), encoding="utf-8")
     write_hourly(f"{out}_hourly.csv", weather.times, hourly)
@@ -293,18 +309,26 @@ def main():
                     help="layout for the main outputs: max (fill the roof, default), neat or best")
     ap.add_argument("--compare-wp", default="420,540",
                     help="panel wattages to work out all three layouts for (default 420,540)")
+    ap.add_argument("--orient", default="building", choices=["building", "south", "search"],
+                    help="panel row direction: building = along the building edge nearest south (default), "
+                         "south = due south, search = try every 5 degrees around the building axis and keep "
+                         "the best panels x sun")
     ap.add_argument("--out", default="roof", help="output name, without extension")
     args = ap.parse_args()
     if not args.address and (args.lat is None or args.lon is None):
         ap.error("give an address, or both --lat and --lon")
     compare = [int(w) for w in args.compare_wp.split(",") if w.strip()]
     result = shade_yield(args.laz_dir, args.address, args.lat, args.lon, args.usable, args.weather, args.out,
-                         args.max_shade, args.max_panels, args.panel_wp, args.layout, compare)
+                         args.max_shade, args.max_panels, args.panel_wp, args.layout, compare, args.orient)
     print(json.dumps({k: result.get(k) for k in ("building", "yield", "usable_area_m2")}, indent=2))
     print("\nLayout options (choose with --panel-wp and --layout):")
     for v in result["variants"]:
         print(f"  {v['panel_wp']} W  {v['option']:<5} {v['name']:<14} {v['panels']:>4} panels "
               f"{v['kwp']:>7.2f} kWp {v['yearly_kwh']:>8,} kWh/yr  {v['kwh_per_kwp'] or 0:>5} kWh/kWp")
+    if result["orientation"]["tried"]:
+        print("\nOrientations tried (best first): azimuth, offset from building axis, panels, score = panels x sun factor")
+        for r in result["orientation"]["tried"][:8]:
+            print(f"  {r['azimuth_deg']:>6}  {r['offset_from_building_deg']:>+4}  {r['panels']:>4}  {r['score']:>7}")
     print(f"Pictures: {args.out}_options.png")
 
 

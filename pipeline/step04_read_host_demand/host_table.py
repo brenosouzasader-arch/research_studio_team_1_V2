@@ -11,7 +11,7 @@ Host demand comes from one of two places (the source is written in every row):
       python -m step04_read_host_demand.host_table --solar data\\pv\\nexus2_hourly.csv ^
           --metered data\\meters\\nexus2.csv --building-id nexus2 --out data\\host\\nexus2
 - proxy (no meter): step 05's baseline profile from a floor area and a use type.
-      python -m step04_read_host_demand.host_table --solar examples\\bruc59_hourly.csv ^
+      python -m step04_read_host_demand.host_table --solar examples\\cep9_hourly.csv ^
           --host-kind office --host-floor-m2 1500 --building-id demo_office --out data\\host\\demo
 
 Outputs in the --out folder (file names and columns follow the roadmap's specification):

@@ -13,9 +13,9 @@ from .horizon import is_lit, sky_view
 from .sun import sun_position
 
 ALBEDO = 0.2              # light reflected by the roof around the panels
-SYSTEM_LOSSES = 0.14      # inverter, cables, dirt, mismatch (PVGIS default)
-TEMP_COEFF = -0.0035      # power change per degree C of cell temperature
-NOCT_RISE = 25.0          # cell is this many degrees above air at 800 W/m2
+SYSTEM_LOSSES = 0.14      # inverter, cables, dirt, mismatch. ASSUMPTION: the value in PVGIS's own example request (PVGIS has no default; see docs/SOURCES.md)
+TEMP_COEFF = -0.0035      # power change per degree C of cell temperature. ASSUMPTION: typical crystalline-silicon datasheet value
+NOCT_RISE = 25.0          # cell is this many degrees above air at 800 W/m2. ASSUMPTION: typical NOCT of about 45 C
 
 
 def plane_of_array(weather, sun_elev, sun_az, lit, svf, tilt_deg, azimuth_deg):

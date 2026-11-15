@@ -1,0 +1,34 @@
+{
+ "query": "Carrer dels Almogàvers 160, Barcelona",
+ "lat": 41.39920581,
+ "lon": 2.19309956,
+ "geocoder": "ICGC",
+ "refcat": "2635601DF3823F",
+ "catastro_address": "CL ALMOGAVERS 154 BARCELONA (BARCELONA)",
+ "building_id": "2635601DF3823F",
+ "year_built": 2022,
+ "current_use": "4_1_office",
+ "dwellings": 0,
+ "building_height_m": 27.0,
+ "height_source": "lidar",
+ "footprint_area_m2": 1718.3,
+ "lidar_tiles": [
+  "lidar-territorial-v3r1-full1km432583-2021-2023.laz"
+ ],
+ "roof": {
+  "is_flat": false,
+  "flat_share": 0.327,
+  "median_slope_deg": 7.3,
+  "roof_height_min": 9.29,
+  "roof_height_max": 33.0,
+  "points": 15456,
+  "note": null
+ },
+ "flat_roof": false,
+ "heritage_protected": null,
+ "heritage_details": null,
+ "warnings": [
+  "roof does not look flat: outside the tool's scope"
+ ],
+ "_about": "step 01 output (building.json) for the A160 office, run 15 Nov 2026"
+}

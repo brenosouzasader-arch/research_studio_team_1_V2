@@ -36,10 +36,6 @@ These come from `python -m step06_prices_and_battery.prices` and `price_model`, 
 |---|---|
 | **[NREL ATB 2024]** [NREL Annual Technology Baseline 2024: commercial battery storage](https://atb.nrel.gov/electricity/2024/commercial_battery_storage) | Lithium-ion (LFP and NMC), "with LFP becoming the primary chemistry for stationary storage starting in 2021". "85% as a representative round-trip efficiency". "15-year lifetime". About one cycle a day. Fixed O&M "2.5% of the capital costs". Systems of 100-2,000 kW, 1-8 hours. Gives pack prices only (e.g. 4-hour $199/kWh, 2022 USD), not a full installed price we could use. |
 | **[PNNL 2022]** Viswanathan et al., [2022 Grid Energy Storage Technology Cost and Performance Assessment](https://www.energy.gov/cmei/2022-grid-energy-storage-technology-cost-and-performance-assessment) (PNNL-33283; [PDF](https://www.sandia.gov/app/uploads/sites/256/2024/02/ESGC-Cost-Performance-Report-2022-PNNL-33283.pdf)) | "the cycle life at 80% DOD for LFP and NMC is 2,400 and 1,520 cycles, respectively"; calendar lives "of 16 years for LFP and 13 years for NMC". Installed cost at 100 MW: 4 hours LFP $385/kWh, NMC $435/kWh; 10 hours LFP $356/kWh, vanadium flow $385/kWh. We use only the **ratios** between types, because these are utility-size plants. |
-| **[PNNL 2020]** [2020 Grid Energy Storage Technology Cost and Performance Assessment, redox flow section](https://www.pnnl.gov/sites/default/files/media/file/RedoxFlow_Methodology.pdf) (DOE/PA-0204) | Vanadium flow: "RTE for RFB systems between 65% and 80%", model value 67.5%; "almost all estimating its capability at 10,000 cycles and above"; calendar life "between 10 and 20 years"; the electrolyte "essentially does not degrade", membranes and electrodes "may need replacement every 10 years". 1 MW / 4 MWh installed $551/kWh (2020). |
-| **[IEA GEVO 2024]** [IEA Global EV Outlook 2024: trends in EV batteries](https://www.iea.org/reports/global-ev-outlook-2024/trends-in-electric-vehicle-batteries) | Sodium-ion: "no sodium-ion chemistries require lithium"; "could cost up to 20% less than incumbent technologies" if brought to scale; manufacturing outside China "still at the laboratory or pilot scale". No cycle life or efficiency given, so those are ASSUMPTIONS. |
-| **[Dong 2023]** Dong et al. (2023), [Cost, energy, and carbon footprint benefits of second-life electric vehicle battery use](https://pmc.ncbi.nlm.nih.gov/articles/PMC10339184), iScience 26(7):107195 | Retired car batteries "retain 70%-80% of their initial energy capacity"; cost "in the range of 20%-80% of new batteries"; used at 50%-60% depth of discharge; "lower roundtrip efficiency" than new (no figure). |
-| **[NREL 2015]** Neubauer et al., [Second Use of PEV Batteries: A Massive Storage Resource](https://www.nrel.gov/docs/fy15osti/64149.pdf) (NREL/PO-5400-64149, conference poster) | Car batteries retire "with ~70% of its initial capacity"; "Predicted 3-10 year second use lifetimes". |
 
 No source was found for an installed price of a 20-500 kWh building battery in Europe (Fraunhofer ISE's cost study was checked but could not be read). That price stays an ASSUMPTION until we get an installer quote.
 
@@ -56,6 +52,17 @@ No source was found for an installed price of a 20-500 kWh building battery in E
 | [Acciona: SelvaMar business campus](https://www.acciona.com) (as cited in the team's test-site research) | 852 panels, 315.24 kWp, covering 18% of the office building's use. Evidence that big offices use all their own solar. Exact page to be linked. |
 | [betevé, 27 Aug 2025: panels on Sants and Sant Antoni markets](https://beteve.cat/medi-ambient/mercat-sants-sant-antoni-estrenen-plaques-fotovoltaiques/) | Mercat de Sants uses about 91% of its output on site and Sant Antoni 100%. Evidence that markets (with fridges) have almost no surplus. 17 markets have panels; the goal is 31. |
 | Madrigal, Gallinad, Vicario, Morell & Vilanova (2026). *Improving energy distribution in collective self-consumption via XGBoost-based allocation coefficients prediction*. Applied Energy 409, 127469. [doi:10.1016/j.apenergy.2026.127469](https://doi.org/10.1016/j.apenergy.2026.127469) (open access, CC BY) | A real municipal community in Barcelona province with two school hosts (140 and 86 kWp). XGBoost predicts hourly use from the calendar plus use 1 hour, 24 hours and 1 week earlier, then sets hourly shares: +8.4% local use, -34% surplus, up to -30% grid use. Supports schools as hosts and our step 05/08 method. It has no battery and its data is not shared. |
+
+## Datasets we could use for building demand (step 04-05), and for heritage (step 01)
+
+| Source | What it backs up |
+|---|---|
+| [GoiEner smart meters data, Scientific Data 2024](https://www.nature.com/articles/s41597-023-02846-0) (DOI [10.5281/zenodo.7362094](https://doi.org/10.5281/zenodo.7362094)) | 25,559 Spanish electricity supply points with HOURLY demand, late 2014 to June 2022, licence CC BY 4.0. About 81% homes, the rest retail, offices, industry and public buildings. Mostly the Basque Country (72.5%), Navarre (13.8%) and Madrid (4.4%), so not Barcelona. The best open hourly demand data for Spain that we found. Not used yet |
+| [Open Data BCN: protected architectural heritage](https://opendata-ajuntament.barcelona.cat/data/en/dataset/patrimoni-arquitectonic-protegit) | The city's heritage catalogue exists as open data (CC BY 4.0, first published 10 Oct 2019, 3 resources). The page names WMS only; formats and fields (cadastral reference? protection level?) still to be checked. Would fill step 01's `heritage_protected` flag |
+| [PVGIS non-interactive API](https://joint-research-centre.ec.europa.eu/photovoltaic-geographical-information-system-pvgis/getting-started-pvgis/api-non-interactive-service_en) | `loss` ("sum of system losses, in percent") is a required input with no default; the page's example uses 14. Gives no temperature coefficient |
+| [APPA Renovables, Informe Autoconsumo Fotovoltaico 2024](https://static.smartgridsinfo.es/media/2025/02/Informe-Autoconsumo-Fotovoltaico-2024.pdf) | A typical 180 kW industrial installation costs €131,400 without taxes (p. 13), about €730 per kWp |
+| [NREL ATB 2024: commercial PV](https://atb.nrel.gov/electricity/2024/commercial_pv) | US commercial PV: US$1.78 per W in 2023; fixed upkeep about US$19 per kW a year |
+| [Reonic: commercial battery storage cost UK 2026](https://reonic.com/en-gb/blog/commercial-battery-storage-cost/) | UK, in pounds: about £200-800 per kWh installed depending on size (the page contradicts itself for 50 and 100 kWh). Too wide and not Spanish, so **not used** for the €500 per kWh |
 
 ## Test sites and city context
 
@@ -81,21 +88,24 @@ No source was found for an installed price of a 20-500 kWh building battery in E
 | Assumption | Value | Where in the code |
 |---|---|---|
 | Panel models: 420 W at 1.76 x 1.13 m (default) and 540 W at 2.28 x 1.13 m | typical catalogue panels; 540 W chosen because CEP9 = 58.32 kWp / 108 panels = 540 W each [CEP9 presentation] | `step02_pv_capacity/layout.py` (`MODULES`) |
-| Layout options "neat blocks" and "best blocks" | rectangles of 6+ / 8+ panels, 3+ / 4+ per row, panels at least 85% / 93% of the roof's 90th-percentile panel; chosen to look like real rooftop systems | `step03_simulate_generation/options.py` (`OPTIONS`) |
+| Layout options "neat blocks" and "best blocks" | rectangles of at least 12 m² / 16 m² of panels (6 / 8 panels of 420 W, 5 / 6 of 540 W), at least 2 panels wide both ways, panels at least 85% / 93% of the roof's 90th-percentile panel; chosen to look like real rooftop systems | `step03_simulate_generation/options.py` (`OPTIONS`) |
 | Where the real CEP9 panels are | 4 blocks, 187 m² in all, traced by eye from the ICGC orthophoto (`ortofoto_color_vigent`, CC BY 4.0) on 15 Nov 2026: light rows on the central roofs read as panels. Not checked against an installer plan, and 187 m² is less than 108 x 2.28 x 1.13 m = 278 m² of panel, so some panels may be missing or the photo may be older than the system | `pipeline/examples/cep9_actual.json` |
 | CEP9 monthly output | the reported 73,750 kWh/yr [CEP9 presentation] split over months with our step 03 shape (no monthly figures published) | `step10_publish_report/export_site_data.py` (`actual_variant`) |
 | CEP9 shares in our model | school 30% [The Guardian], 30 homes x 550 kWh (middle of 400-700 [CEP9]) = 23%, the other three members split the rest equally | `website/README.md` (step 08 `agreed_shares.py --shares`) |
+| System losses 14% | the value in PVGIS's own example request; **PVGIS has no default**, `loss` is a required input and its documentation gives no value [PVGIS API page, read 15 Nov 2026]. Sindhuja's repo also uses 14%. The usual range is 10-20% | `step03_simulate_generation/energy.py` (`SYSTEM_LOSSES`) |
+| Power change with heat -0.35% per °C above 25 °C, panel at 420 W / 540 W | typical crystalline-silicon datasheet value; not read from a specific datasheet yet | `energy.py` (`TEMP_COEFF`) |
+| Panel rows: 10° tilt, rows spaced for no shade at 25° sun height (21 Dec noon), 1.76 x 1.13 m panel | catalogue and rule-of-thumb values | `step02_pv_capacity/layout.py` |
+| Orientation score: loss = 0.5 x sin(tilt) x (1 - cos(angle off south)) | a rough ranking formula for `--orient search`; the real yield comes from step 03 | `layout.py` (`yield_factor`) |
+| Group search: at most 6 guests, each must add 250 kWh a year | from the matchmaker diagram's stopping rule; ASSUMPTION | `step08_share_energy/optimise.py` |
 | Electricity taxes on a kWh | electricity tax 5.11% then VAT 21% (rates have changed over time) | `step08_share_energy/agreed_shares.py` (`TAX_FACTOR`) |
 | LFP installed price | €500 per kWh | `step06_prices_and_battery/battery_types.py` (`LFP_CAPEX_EUR_PER_KWH`) |
-| Sodium-ion round trip, cycle life, calendar life | 85%, 3,000, 12 years | `battery_types.py` |
-| Second-life EV round trip, cycle life, price | 80%, 2,000, 50% of new | `battery_types.py` |
-| Vanadium flow usable share | 100% | `battery_types.py` |
-| Battery power | half its size per hour (2-hour battery); vanadium flow a quarter | `battery_types.py` (`c_rate`) |
+| Battery power | half its size per hour (a 2-hour battery) | `battery_types.py` (`c_rate`) |
 | Export paid at the wholesale (OMIE) price | | `step06_prices_and_battery/prices.py` |
 | PVPC used for big buildings too (they really pay 3.0TD) | | `prices.py` |
 | Guest price = PVPC minus 10% | team choice, slider on the report page | `step08_share_energy/battery_agent.py` (`GUEST_DISCOUNT`) |
 | Neighbours within 100 m, wired directly | team choice | `step07_discover_neighbours/candidates.py` |
 | Share of flats that join | 40% | `candidates.py` (`JOIN_RATE`) |
-| Panel cost €1,200 / 1,400 / 1,600 per kWp, upkeep €15 per kWp a year | | `step09_compare_investment/investment.py` |
+| Panel cost €1,200 / 1,400 / 1,600 per kWp (central 1,400) | **Probably too high for a big roof**: the only Spanish figure we found is about €730 per kWp for a 180 kW industrial installation, without VAT [APPA 2024]; US commercial PV is about US$1,780 per kWp [NREL ATB 2024 PV]. Not changed yet: waiting for the team to choose (see the open questions) | `step09_compare_investment/investment.py` (`CASES`) |
+| Upkeep €15 per kWp a year | close to NREL's "about $19/kWDC-yr for 2023" for US commercial PV [NREL ATB 2024 PV]; no Spanish figure found | `investment.py` (`OM_EUR_PER_KWP_YEAR`) |
 | Flat prices for the legal-share comparison (grid 0.16, sale 0.10, export 0.05 €/kWh) | | `investment.py` (`CASES`) |
 | Office 120 kWh/m²/yr, school 60 kWh/m²/yr and their day shapes | to replace with trained or metered data | `step05_forecast_demand/baseline_profiles.py` |

@@ -23,12 +23,12 @@ research_studio_team_1_V2/
 │   ├── step04_read_host_demand/      meter data or proxy → 8,760-hour host table, surplus (new)
 │   ├── step05_forecast_demand/       baseline profiles + Open Data BCN; AI model next     (from V1 + to build)
 │   ├── step06_prices_and_battery/    real hourly prices, price forecast, battery size     (new)
-│   ├── step07_discover_neighbours/   buildings within 100 m → shortlist, closest first    (new, reworked from V1)
-│   ├── step08_share_energy/          battery agent for host + guests; legal-share options (new)
+│   ├── step07_discover_neighbours/   building search around the host (used by the combined 07+08 tool)
+│   ├── step08_share_energy/          steps 07+08 as one optimiser (best group of buildings); battery agent; legal-share options (new)
 │   ├── step09_compare_investment/    owner and guest money, with and without battery      (new)
 │   ├── step10_publish_report/        one data file for the website                        (new)
 │   ├── tests/                        offline tests for every step
-│   └── examples/                     Bruc 59 example roof + made-up neighbours, for the demo
+│   └── examples/                     CEP9 school example roof and its real neighbours, for the offline tests and demo
 ├── website/                          the results page (GitHub Pages)
 ├── sites/                            one settings file per candidate test site (Poblenou, UPC)
 └── docs/SOURCES.md                   every source, and what each one backs up
@@ -45,23 +45,23 @@ cd pipeline
 python -m venv .venv
 .venv\Scripts\activate
 pip install -r requirements.txt
-python -m pytest tests                 (should end with "72 passed")
+python -m pytest tests                 (should end with "86 passed")
 ```
 
-**Try steps 04-09 now**, on the Bruc 59 example roof with a made-up office host and made-up neighbours. Step 06 needs the price file once (`download_prices.py`, a few minutes, needs internet); everything else runs offline:
+**Try steps 04-09 now**, on the CEP9 school roof and its real neighbours (building use is an estimate, not meters). Step 06 needs the price file once (`download_prices.py`, a few minutes, needs internet); everything else runs offline:
 
 ```
-python -m step04_read_host_demand.host_table --solar examples\bruc59_hourly.csv --host-kind office --host-floor-m2 300 --building-id demo --out data\host\demo
+python -m step04_read_host_demand.host_table --solar examples\cep9_hourly.csv --host-kind school --host-floor-m2 1811.7 --building-id cep9 --out data\host\cep9
 python step06_prices_and_battery\download_prices.py
 python -m step06_prices_and_battery.prices
 python -m step06_prices_and_battery.price_model
-python -m step06_prices_and_battery.battery_size --host-dir data\host\demo --compare-types --out data\battery\demo
-python -m step07_discover_neighbours.candidates --host-dir data\host\demo --lat 41.3935 --lon 2.1689 --candidates-csv examples\demo_candidates.csv --out data\neighbours\demo
-python -m step08_share_energy.battery_agent --host-dir data\host\demo --neighbours-dir data\neighbours\demo --out data\sharing\demo
-python -m step09_compare_investment.investment --sharing-dir data\sharing\demo --kwp 15.5 --out data\investment\demo
+python -m step06_prices_and_battery.battery_size --host-dir data\host\cep9 --compare-types --out data\battery\cep9
+python -m step08_share_energy.optimise --host-dir data\host\cep9 --lat 41.40458605 --lon 2.20067448 --candidates-csv examples\cep9_members.csv --max-distance 2000 --join-rate 1 --out data\match\cep9
+python -m step08_share_energy.battery_agent --host-dir data\host\cep9 --neighbours-dir data\match\cep9 --out data\sharing\cep9
+python -m step09_compare_investment.investment --sharing-dir data\sharing\cep9 --kwp 53.34 --out data\investment\cep9
 ```
 
-What the demo shows (details in each step's README): alone, the office uses 77% of its solar. Two neighbours within 100 m raise that to 97%. A battery is not worth it at an assumed €500/kWh: for the office alone a 5 kWh LFP battery would break even only at about €195/kWh. A better price forecast would add only about €2 a year, because tomorrow's prices are published the day before.
+What it shows (details in each step's README): alone, the school uses 59% of its solar. Its four members (fire station, another institut, a civic centre and 30 homes) raise that to 99%. A battery is not worth it at an assumed €500/kWh. A better price forecast would add only about €3 a year, because tomorrow's prices are published the day before.
 
 The full run for a real host is in [pipeline/README.md](pipeline/README.md).
 
@@ -71,9 +71,8 @@ The full run for a real host is in [pipeline/README.md](pipeline/README.md).
 |---|---|
 | 01-03 | Working (V1, tested live on Eixample roofs). Needs LiDAR tiles for the new site |
 | 04 | Working. Waiting for real meter data; proxy profiles until then |
-| 05 | Baseline working. AI model to build in Week 2, only with meter data |
+| 05 | Rule-based estimate working. A trained model only with real meter data |
 | 06 | Working on real 2023-2025 prices. Battery prices for Europe still an ASSUMPTION; get an installer quote |
-| 07 | Working on Catastro and on hand-made lists. Not yet run live |
-| 08 | Working, with checks (no grid charging, energy conserved, no guest pays more than the grid). Plans with predicted use only |
+| 07+08 | One optimiser that tries many groups of buildings, in wired (100 m) and Spanish legal (500 m, fixed shares) modes. Run on the 4 real CEP9 members; not yet run on a full Catastro search. The battery agent plans with predicted use only |
 | 09 | Working. Panel costs are assumptions |
 | 10 | Website working on the demo data (see `website/README.md`). 3D view and the real case still to do |

@@ -198,7 +198,7 @@ def main():
     from step04_read_host_demand.host_table import read_hourly
     ap = argparse.ArgumentParser(description="Step 06a: real hourly prices on the solar year")
     ap.add_argument("--prices", default=str(DEFAULT_FILE), help="REE file from download_prices.py")
-    ap.add_argument("--solar", default="examples/bruc59_hourly.csv",
+    ap.add_argument("--solar", default="examples/cep9_hourly.csv",
                     help="any step 03 <name>_hourly.csv (only its hours are used)")
     ap.add_argument("--out", default="data/prices")
     args = ap.parse_args()
