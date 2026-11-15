@@ -26,9 +26,10 @@ research_studio_team_1_V2/
 │   ├── step07_discover_neighbours/   buildings within 100 m → shortlist, closest first    (new, reworked from V1)
 │   ├── step08_share_energy/          battery agent for host + guests; legal-share options (new)
 │   ├── step09_compare_investment/    owner and guest money, with and without battery      (new)
-│   ├── step10_publish_report/        3D view + report                                     (to build)
+│   ├── step10_publish_report/        one data file for the website                        (new)
 │   ├── tests/                        offline tests for every step
 │   └── examples/                     Bruc 59 example roof + made-up neighbours, for the demo
+├── website/                          the results page (GitHub Pages)
 ├── sites/                            one settings file per candidate test site (Poblenou, UPC)
 └── docs/SOURCES.md                   every source, and what each one backs up
 ```
@@ -75,4 +76,4 @@ The full run for a real host is in [pipeline/README.md](pipeline/README.md).
 | 07 | Working on Catastro and on hand-made lists. Not yet run live |
 | 08 | Working, with checks (no grid charging, energy conserved, no guest pays more than the grid). Plans with predicted use only |
 | 09 | Working. Panel costs are assumptions |
-| 10 | To build (Week 3-4) |
+| 10 | Website working on the demo data (see `website/README.md`). 3D view and the real case still to do |

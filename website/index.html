@@ -1,0 +1,182 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Roofscapes (Re)Powered</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<meta name="description" content="Who can use a big roof's spare solar? Results of the Roofscapes (Re)Powered pipeline, with every number linked to its source.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Inter:wght@400;500;600&family=Space+Grotesk:wght@500;600&display=swap">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<div class="shell">
+  <nav class="rail" aria-label="Steps">
+    <div class="brand">Roofscapes (Re)Powered<small>IAAC MaAI · team 1</small></div>
+    <ul class="steps" id="steps">
+      <li><a href="#overview"><span>—</span>Overview</a></li>
+      <li><a href="#roof"><span>02-03</span>Roof and solar</a></li>
+      <li><a href="#surplus"><span>04</span>Spare power</a></li>
+      <li><a href="#neighbours"><span>05-07</span>Neighbours</a></li>
+      <li><a href="#prices"><span>06</span>Prices</a></li>
+      <li><a href="#battery"><span>06-08</span>Battery</a></li>
+      <li><a href="#money"><span>09</span>Money</a></li>
+      <li><a href="#sources"><span>—</span>Sources</a></li>
+    </ul>
+    <p class="rail-note">Step numbers match the folders in the pipeline. Each number on this page shows where it comes from.</p>
+  </nav>
+
+  <main>
+    <div class="wrap">
+      <section id="overview">
+        <span class="eyebrow">Rooftop solar · Barcelona</span>
+        <h1>Who can use this roof's spare solar?</h1>
+        <p class="lede">A big roof often makes more power than its building uses, mostly at weekends and in summer. This tool finds that spare power hour by hour, connects the closest neighbours who can use it, tests whether a battery is worth it with real Barcelona prices, and works out what the roof owner and the neighbours gain.</p>
+        <div class="banner" id="demo-banner" hidden><b>Demo data</b><span id="demo-note"></span></div>
+        <div class="stats" id="hero-stats"></div>
+        <div class="card">
+          <div class="card-head"><h3>What every number is</h3></div>
+          <div class="controls">
+            <span class="chip" data-kind="measured">measured</span><span class="small">real data: prices, meters</span>
+            <span class="chip" data-kind="modelled">modelled</span><span class="small">computed by the pipeline</span>
+            <span class="chip" data-kind="assumption">assumption</span><span class="small">a value we chose; listed in Sources</span>
+          </div>
+        </div>
+      </section>
+
+      <section id="roof">
+        <span class="eyebrow">Steps 02-03 · roof and solar</span>
+        <h2>How much the roof makes</h2>
+        <p class="lede" id="roof-lede"></p>
+        <div class="grid3">
+          <div class="card">
+            <div class="card-head"><h3>Solar output by month</h3><span class="chip" data-kind="modelled">modelled · step 03</span></div>
+            <div id="monthly"></div>
+          </div>
+          <div class="card">
+            <div class="card-head"><h3>Panel layout</h3><span class="small">darker = produces more</span></div>
+            <div id="panels"></div>
+            <p class="small" id="panel-note"></p>
+          </div>
+        </div>
+      </section>
+
+      <section id="surplus">
+        <span class="eyebrow">Step 04 · host use vs. solar</span>
+        <h2>When the roof has power to spare</h2>
+        <p class="lede" id="surplus-lede"></p>
+        <div class="card">
+          <div class="card-head"><h3>Spare solar, every hour of the year</h3><span class="chip" data-kind="modelled">modelled · step 04</span></div>
+          <div id="heatmap"></div>
+          <div class="legend" id="heat-legend"></div>
+        </div>
+      </section>
+
+      <section id="neighbours">
+        <span class="eyebrow">Steps 05-07 · neighbours within 100 m</span>
+        <h2>Who uses power when the roof has it</h2>
+        <p class="lede">Guests are wired directly to the host, so the tool only looks within 100 m and takes the closest buildings that can use some of the spare solar.</p>
+        <div class="card">
+          <div class="card-head">
+            <h3>Average day: solar and each building's use</h3>
+            <div class="seg" role="group" aria-label="Day type" id="daytype">
+              <button type="button" aria-pressed="true" data-v="weekday">Weekday</button>
+              <button type="button" aria-pressed="false" data-v="weekend">Weekend</button>
+            </div>
+          </div>
+          <div id="profiles"></div>
+          <div class="legend" id="profiles-legend"></div>
+          <p class="small">Building use is <span class="chip" data-kind="assumption">assumption</span> (step 05 profiles from floor area and use type) until we have meter data. Solar is the mean of June-August for weekdays and weekends alike.</p>
+        </div>
+        <div class="grid2">
+          <div class="card">
+            <div class="card-head"><h3>Buildings that join</h3></div>
+            <div class="blist" id="blist"></div>
+          </div>
+          <div class="card">
+            <div class="card-head"><h3>Within reach</h3><span class="small">plan view, north up</span></div>
+            <div id="map"></div>
+            <p class="small" id="map-note"></p>
+          </div>
+        </div>
+      </section>
+
+      <section id="prices">
+        <span class="eyebrow">Step 06 · real Spanish prices</span>
+        <h2>Power costs more in the evening</h2>
+        <p class="lede" id="prices-lede"></p>
+        <div class="grid3">
+          <div class="card">
+            <div class="card-head"><h3>Regulated price (PVPC) by hour of day</h3><span class="chip" data-kind="measured">measured · REE 2023-2025</span></div>
+            <div id="pricechart"></div>
+            <div class="legend" id="price-legend"></div>
+          </div>
+          <div class="card">
+            <div class="card-head"><h3>Forecasting prices</h3><span class="chip" data-kind="modelled">modelled · step 06</span></div>
+            <p class="note">Tomorrow's prices are published the day before (the market closes at 12:00 CET). For 2 to 7 days ahead, a machine-learning model (gradient-boosted trees) was trained on 2023-2024 and tested on 2025.</p>
+            <div class="table-wrap"><table id="forecast-table"></table></div>
+            <p class="small">Mean error in €/kWh. Lower is better.</p>
+          </div>
+        </div>
+      </section>
+
+      <section id="battery">
+        <span class="eyebrow">Steps 06-08 · battery at the host</span>
+        <h2>Is a battery worth it?</h2>
+        <p class="big-answer" id="battery-answer"></p>
+        <div class="card">
+          <div class="card-head">
+            <h3>Yearly gain vs. yearly cost, host alone</h3>
+            <label class="field" for="btype">Battery type
+              <select id="btype"></select>
+            </label>
+          </div>
+          <div id="sizing"></div>
+          <div class="legend" id="sizing-legend"></div>
+          <p class="note" id="type-note"></p>
+        </div>
+        <div class="card">
+          <div class="card-head">
+            <h3 id="day-title">A day run by the battery agent</h3>
+            <div class="seg" role="group" aria-label="Example day" id="daypick"></div>
+          </div>
+          <p class="note" id="day-note"></p>
+          <div id="daychart"></div>
+          <div class="legend" id="day-legend"></div>
+          <div id="levelchart"></div>
+        </div>
+      </section>
+
+      <section id="money">
+        <span class="eyebrow">Step 09 · the owner's investment</span>
+        <h2>What the owner and the neighbours gain</h2>
+        <p class="lede">The owner pays for the panels, uses what it can and sells the rest to the guests below the grid price. Move the slider to change the guests' discount.</p>
+        <div class="card">
+          <div class="controls">
+            <label class="field" for="discount"><span>Guest discount: <b id="discount-out" class="num"></b> below the grid price</span>
+              <input type="range" id="discount" min="0" max="40" step="1" value="10">
+            </label>
+            <label class="field" for="pyear">Price year
+              <select id="pyear"></select>
+            </label>
+          </div>
+          <div class="stats" id="money-stats"></div>
+          <p class="small" id="money-note"></p>
+        </div>
+      </section>
+
+      <section id="sources" class="sources">
+        <span class="eyebrow">Evidence</span>
+        <h2>Sources</h2>
+        <p class="lede">Every source the tool uses and what it backs up, copied from <code>docs/SOURCES.md</code> in the repository.</p>
+        <div id="sources-body"></div>
+      </section>
+    </div>
+  </main>
+</div>
+<div class="tip" id="tip" hidden></div>
+<script src="app.js"></script>
+</body>
+</html>

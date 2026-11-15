@@ -13,7 +13,7 @@ Run every command **from this folder**. Each step folder has its own README with
 | 07 Discover neighbours | `step07_discover_neighbours/` | Which buildings within 100 m could use the surplus? | `shortlist.csv`, `candidate_buildings.geojson` |
 | 08 Share energy | `step08_share_energy/` | Hour by hour, who gets the solar and the battery's power? | `battery_agent_summary.json`, `decisions_hourly.csv` (and `allocation.csv` for the legal options) |
 | 09 Compare investment | `step09_compare_investment/` | What does the owner earn, and when does it pay back? | `investment_battery.json`, `investment_summary.json` |
-| 10 Publish report | `step10_publish_report/` | (to build) | 3D view + report |
+| 10 Publish report | `step10_publish_report/` | How do we show it so anyone can check it? | `website/data/site_data.json` for the website |
 
 Every number the tool uses has a source in [../docs/SOURCES.md](../docs/SOURCES.md) or is marked **ASSUMPTION** in the code.
 
@@ -48,6 +48,7 @@ python -m step06_prices_and_battery.battery_size --host-dir data\host\nexus2 --c
 python -m step07_discover_neighbours.candidates --host-dir data\host\nexus2 --host "Carrer de Jordi Girona 29, Barcelona" --out data\neighbours\nexus2
 python -m step08_share_energy.battery_agent --host-dir data\host\nexus2 --neighbours-dir data\neighbours\nexus2 --out data\sharing\nexus2
 python -m step09_compare_investment.investment --sharing-dir data\sharing\nexus2 --kwp <kWp from data\pv\nexus2_yield.json> --out data\investment\nexus2
+python -m step10_publish_report.export_site_data --name nexus2 --yield data\pv\nexus2_yield.json --lat <host lat> --lon <host lon>
 ```
 
 No meter file yet? Replace `--metered ...` with `--host-kind office --host-floor-m2 6000`.

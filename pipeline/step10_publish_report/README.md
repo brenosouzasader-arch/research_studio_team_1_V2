@@ -1,13 +1,15 @@
 # Step 10: Publish report
 
-**Roadmap:** input = all previous results, sources, assumptions, validation → output = 3D host/community view + exportable feasibility report.
+**Question this step answers:** how do we show the results so anyone can check them?
 
-Not built yet (roadmap Week 3-4). Plan:
+`export_site_data.py` collects the outputs of steps 03 to 09 and `docs/SOURCES.md` into one file, `website/data/site_data.json`, which the website in [`../../website/`](../../website/) reads. Every headline number in it carries a label: *measured* (real prices or meters), *modelled* (computed by the pipeline) or *assumption* (a value we chose), and where it comes from.
 
-- Reuse V1's 3D map (`website/` in the V1 repository: ArcGIS, the city's 3D model, roof files per building). It was built for the Eixample co-investment communities, so it needs a new view: one host, its guests within 100 m, and the scenarios side by side.
-- A report page that reads `host_summary.json` (step 04), `battery_sizing.json` (step 06), `shortlist.csv` (step 07), `battery_agent_summary.json` (step 08) and `investment_battery.json` (step 09), and marks every number as measured, modelled or **ASSUMPTION**, with its source from `docs/SOURCES.md`.
-- **Guest-price slider** (team decision, 15 Nov 2026): default 10% below the grid price. Use `owner_total_at_discount()` in `step09_compare_investment/investment.py`; see that step's README.
-- A battery-type picker, reading the rows of `battery_sizing.json` (run step 06 with `--compare-types`).
-- A "fewer panels" button that explains how to re-run from step 03 with `--max-panels`.
+```
+python -m step10_publish_report.export_site_data --name demo --yield examples\bruc59_yield.json --lat 41.3935 --lon 2.1689
+```
 
-V1's map code was left out of this repository on purpose, so the pipeline stays small. Copy it in when this step starts.
+It needs these folders from the earlier steps: `data\host\<name>` (04), `data\prices` (06), `data\battery\<name>` (06), `data\neighbours\<name>` (07), `data\sharing\<name>` (08), `data\investment\<name>` (09).
+
+What the website shows: the roof and its monthly solar, spare solar for every hour of the year, the buildings within 100 m and their daily use, real hourly prices and the forecast test, the battery sizes and types with an example day run by the battery agent, and the owner's money with a **guest-discount slider** (default 10%, team decision 15 Nov 2026). How to view and publish it: [`website/README.md`](../../website/README.md).
+
+Still to add: a 3D view (V1's ArcGIS map is in the V1 repository) and the real A160 case.
