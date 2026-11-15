@@ -211,6 +211,7 @@ def shade_yield(laz_dir, address=None, lat=None, lon=None, usable_path=None,
                 panel_wp=420, layout_option="max", compare_wp=None, orient="building"):
     """Steps 3 + 4. panel_wp and layout_option pick the layout the main outputs use;
     compare_wp lists the panel wattages to work the three options out for (default: panel_wp only)."""
+    Path(out).parent.mkdir(parents=True, exist_ok=True)   # data\\pv does not exist on a fresh clone
     if layout_option not in {o["id"] for o in OPTIONS}:
         raise SystemExit(f"unknown layout {layout_option}; choose from {[o['id'] for o in OPTIONS]}")
     module = get_module(panel_wp)

@@ -136,6 +136,7 @@ def main():
         ap.error("give an address, or both --lat and --lon")
 
     record, fp = find_building(args.address, args.lat, args.lon, args.laz_dir, args.heritage)
+    Path(args.out).parent.mkdir(parents=True, exist_ok=True)
     Path(args.out).write_text(json.dumps(asdict(record), indent=2, default=str), encoding="utf-8")
     save_geojson(record, fp, Path(args.out).with_suffix(".geojson"))
     print(json.dumps({k: v for k, v in asdict(record).items() if k != "footprint_wkt"},
