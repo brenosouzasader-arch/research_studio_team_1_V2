@@ -4,8 +4,8 @@ Step 03 reads one building at a time. A host that owns panels on two or more bui
 run once per roof, and this tool adds the results into one yield file with the same layout
 as step 03's own, so steps 04 to 09 and the website treat it as a single roof.
 
-    python -m step03_simulate_generation.combine_roofs --roof red=data\\pv\\cep9_red_yield.json ^
-        --roof yellow=data\\pv\\cep9_yellow_yield.json --out data\\pv\\cep9
+    python -m step03_simulate_generation.combine_roofs --roof Escola=data\\pv\\cep9_red_yield.json ^
+        --roof Institut=data\\pv\\cep9_yellow_yield.json --out data\\pv\\cep9
 
 What is added: panels, kWp, yearly and monthly kWh, and the hourly solar of every layout variant
 (a variant is matched across roofs by panel wattage and layout option, for example 420 W neat).
@@ -75,23 +75,29 @@ def combine(roofs, out):
         yearly = sum(v["yearly_kwh"] for *_, v in parts)
         merged = {k: v0[k] for k in ("panel_wp", "panel", "option", "name", "rule")}
         merged.update({
-            "blocks": sum(v.get("blocks", 0) for *_, v in parts), "panels": panels, "kwp": kwp,
+            "blocks": sum((v.get("blocks") or 0) for *_, v in parts), "panels": panels, "kwp": kwp,
             "tilt_deg": v0["tilt_deg"], "azimuth_deg": v0["azimuth_deg"], "yearly_kwh": yearly,
             "kwh_per_kwp": round(yearly / kwp) if kwp else 0,
-            "mean_shade_loss": round(sum(v["mean_shade_loss"] * v["panels"] for *_, v in parts) / max(panels, 1), 3),
+            "mean_shade_loss": round(sum((v["mean_shade_loss"] or 0) * v["panels"] for *_, v in parts) / max(panels, 1), 3),
             "monthly_kwh": [sum(v["monthly_kwh"][i] for *_, v in parts) for i in range(12)],
             "peak_hour_kw": round(float(hourly.max()), 2),
             "hourly_file": f"{out.name}_hourly_{key[0]}_{key[1]}.csv",
             "roofs": [{"roof": n, "panels": v["panels"], "kwp": v["kwp"], "yearly_kwh": v["yearly_kwh"],
                        "tilt_deg": v["tilt_deg"], "azimuth_deg": v["azimuth_deg"]} for n, _, v in parts],
             "panel_list": [{**q, "roof": n} for n, _, v in parts for q in v["panel_list"]]})
+        funnels = [v.get("funnel") for *_, v in parts]
+        if all(isinstance(f, dict) for f in funnels):   # how many panels each rule removed, added over the roofs
+            merged["funnel"] = {k: sum(f.get(k, 0) or 0 for f in funnels) for k in funnels[0]}
+        lefts = [v.get("left_out") for *_, v in parts]
+        if all(isinstance(x, list) for x in lefts):
+            merged["left_out"] = [q for x in lefts for q in x]
         variants.append(merged)
     main = next((v for v in variants if v["panel_wp"] == first["yield"]["panel_wp"]
                  and v["option"] == first["yield"]["layout"]), variants[0])
     result = {
         "building": {"refcat": "+".join(y["building"]["refcat"] for _, _, y in loaded),
                      "address": " + ".join(f"{n}: {y['building']['address']}" for n, _, y in loaded),
-                     "query": " + ".join(y["building"]["query"] for _, _, y in loaded)},
+                     "query": " + ".join(n for n, _, _ in loaded)},
         "yield": {**{k: main[k] for k in ("panels", "kwp", "tilt_deg", "azimuth_deg", "yearly_kwh", "kwh_per_kwp",
                                            "mean_shade_loss", "monthly_kwh", "peak_hour_kw", "panel_wp")},
                   "layout": main["option"], "panels_left_out": sum(y["yield"]["panels_left_out"] for _, _, y in loaded),

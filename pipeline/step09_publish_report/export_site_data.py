@@ -52,7 +52,7 @@ def layout_variants(y):
     wattage), for the website's layout switch. Older yield files have none: then the one
     layout they hold is shown as "Fill the roof" with 420 W panels."""
     keys = ("panel_wp", "panel", "option", "name", "rule", "blocks", "panels", "kwp", "yearly_kwh",
-            "kwh_per_kwp", "mean_shade_loss", "monthly_kwh", "funnel", "left_out")
+            "kwh_per_kwp", "mean_shade_loss", "monthly_kwh", "funnel", "left_out", "roofs")
     if y.get("variants"):
         return [{**{k: v.get(k) for k in keys},
                  "panel_list": [{"c": p["corners"], "k": p["kwh_year"]} for p in v["panel_list"]]}
