@@ -62,3 +62,19 @@ def test_learned_shapes_follow_the_data(meters, tmp_path):
     hour, wd, _ = bp.local_hours(t)
     assert sh["office"][(hour == 12) & (wd < 5)].mean() > 3 * sh["office"][(hour == 3) & (wd < 5)].mean()
     assert sh["office"][wd < 5].mean() > sh["office"][wd >= 5].mean()
+
+
+def test_compare_with_barcelona_profile(tmp_path):
+    import json
+    from step05_forecast_demand import compare_with_bcn as cb
+    hs = [{"btype": t, "season": s, "weekend": w, "hour": h, "share": 1 / 24}
+          for t in ("household", "retail") for s in ("winter", "spring", "summer", "autumn") for w in (0, 1) for h in range(24)]
+    da = [{"btype": t, "month": m, "weekend": w, "kwh_day_mean": 10 + m * (1 - w) + 5 * w}
+          for t in ("household", "retail") for m in range(1, 13) for w in (0, 1)]
+    pd.DataFrame(hs).to_csv(tmp_path / "hourly_shape.csv", index=False)
+    pd.DataFrame(da).to_csv(tmp_path / "daily_averages.csv", index=False)
+    prof = {k: {"band_share": {"weekday": [.25] * 4, "weekend": [.25] * 4}, "weekend_vs_weekday": 0.8,
+                "month_factor": [1 + m / 100 for m in range(12)]} for k in ("home", "shop")}
+    (tmp_path / "p.json").write_text(json.dumps(prof))
+    out = cb.compare(tmp_path / "p.json", tmp_path)
+    assert list(out.type)[0] == "Barcelona home" and out["month correlation"].min() > 0.9
