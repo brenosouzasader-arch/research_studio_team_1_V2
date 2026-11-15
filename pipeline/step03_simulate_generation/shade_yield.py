@@ -15,9 +15,17 @@ The hourly CSV is what step 04 (host table) reads.
 Panels: by default every panel that fits (team decision: fill the roof). To try a smaller
 system after seeing the money in step 09, run again with --max-panels N; the N panels that
 produce most are kept.
+
+Layout options (see options.py): every run also works out three layouts, "max" (fill the
+roof), "neat" (neat blocks of good panels) and "best" (bigger blocks of the best panels),
+for each panel wattage in --compare-wp (default 420 and 540 W). They are listed under
+"variants" in <out>_yield.json, each with its own <out>_hourly_<W>_<option>.csv, and drawn
+side by side in <out>_options.png. --panel-wp and --layout choose which one the main
+outputs (<out>_hourly.csv, <out>_panels.*) and the later steps use.
 """
 import argparse
 import csv
+import io
 import json
 from pathlib import Path
 
@@ -29,10 +37,11 @@ from shapely.ops import unary_union
 from step01_select_host.find_building import find_building
 from step02_pv_capacity.lidar_roof import read_roof_from_tiles
 from step02_pv_capacity.read_roof import lidar_only
-from step02_pv_capacity.layout import Layout, lay_out
+from step02_pv_capacity.layout import DEFAULT_MODULE, MODULES, Layout, get_module, lay_out
 
 from .energy import yield_for_layout
 from .horizon import horizons, surface_model
+from .options import OPTIONS, all_options
 from .weather import DEFAULT_PATH, load_tmy
 
 MOUNT_HEIGHT_M = 0.4   # panel centre above the roof surface
@@ -76,22 +85,40 @@ def usable_geojson(usable):
 
 
 def analyse(lroof, footprint, laz_dir, weather, lat, lon, usable=None, max_shade_loss=MAX_SHADE_LOSS,
-            max_panels=None):
-    """Steps 3 + 4 for one roof. Returns (kept layout, yearly kWh per kept panel,
-    shade loss per kept panel, hourly kWh of the kept panels, dropped panels)."""
+            max_panels=None, module=DEFAULT_MODULE, surface=None):
+    """Steps 3 + 4 for one roof and one panel model. Returns (kept layout, yearly kWh
+    per kept panel, shade loss per kept panel, hourly kWh of the kept panels, dropped
+    panels, hourly kWh of each kept panel as an (n_panels, n_hours) array).
+    surface: (grid, dsm) from surface_model, to reuse it across panel models."""
     if usable is None:
         usable = lroof.grid.cells_to_polygon(lroof.usable)
-    layout = lay_out(usable, footprint)
+    layout = lay_out(usable, footprint, module=module)
     if not layout.count:
-        return layout, np.zeros(0), np.zeros(0), np.zeros(len(weather)), []
-    grid, dsm = surface_model(footprint, laz_dir)
+        return layout, np.zeros(0), np.zeros(0), np.zeros(len(weather)), [], np.zeros((0, len(weather)))
+    grid, dsm = surface if surface is not None else surface_model(footprint, laz_dir)
     centres = layout.centres()
     horizon = horizons(grid, dsm, centres[:, 0], centres[:, 1], panel_heights(lroof, centres))
-    kwh, loss, hourly, keep = yield_for_layout(layout, horizon, weather, lat, lon, max_shade_loss,
-                                              max_panels)
+    kwh, loss, hourly, keep, per_panel = yield_for_layout(layout, horizon, weather, lat, lon,
+                                                          max_shade_loss, max_panels, per_panel=True)
     dropped = [p for p, k in zip(layout.panels, keep) if not k]
-    kept = Layout([p for p, k in zip(layout.panels, keep) if k], layout.azimuth_deg, layout.tilt_deg)
-    return kept, kwh[keep], loss[keep], hourly, dropped
+    return layout.subset(keep), kwh[keep], loss[keep], hourly, dropped, per_panel[keep]
+
+
+def variants_for(layout, kwh, per_panel, weather):
+    """The three layout options (options.py) for one analysed layout.
+    Returns a list of (option dict, keep mask, number of blocks, hourly kWh)."""
+    cells = layout.cells if layout.cells is not None else [(0, i) for i in range(layout.count)]
+    chosen = all_options(cells, kwh)
+    out = []
+    for o in OPTIONS:
+        keep, n_blocks = chosen[o["id"]]
+        hourly = per_panel[keep].sum(axis=0) if keep.any() else np.zeros(len(weather))
+        out.append((o, keep, n_blocks, hourly))
+    return out
+
+
+def corners(p):
+    return [[round(x, 2), round(y, 2)] for x, y in list(p.exterior.coords)[:4]]
 
 
 def summarise(layout, kwh, loss, hourly, weather):
@@ -110,7 +137,7 @@ def summarise(layout, kwh, loss, hourly, weather):
     }
 
 
-def panels_png(footprint, usable, layout, kwh, path, dropped=(), px_per_m=10):
+def panels_png(footprint, usable, layout, kwh, path, dropped=(), px_per_m=10, scale=None):
     minx, miny, maxx, maxy = footprint.buffer(2).bounds
     w, h = int((maxx - minx) * px_per_m), int((maxy - miny) * px_per_m)
     img = Image.new("RGB", (w, h), (235, 232, 226))
@@ -124,7 +151,7 @@ def panels_png(footprint, usable, layout, kwh, path, dropped=(), px_per_m=10):
         d.polygon(T(g.exterior.coords), outline=(60, 60, 60))
     for p in dropped:
         d.polygon(T(p.exterior.coords), fill=(200, 200, 200), outline=(150, 150, 150))
-    lo, hi = (kwh.min(), kwh.max()) if len(kwh) else (0, 1)
+    lo, hi = scale if scale else ((kwh.min(), kwh.max()) if len(kwh) else (0, 1))
     for p, k in zip(layout.panels, kwh):
         t = 0.0 if hi <= lo else (k - lo) / (hi - lo)   # dark blue = most shade, orange = best
         colour = tuple(int(a + (b - a) * t) for a, b in zip((40, 60, 120), (240, 140, 20)))
@@ -139,11 +166,47 @@ def panels_png(footprint, usable, layout, kwh, path, dropped=(), px_per_m=10):
     if dropped:
         d.rectangle([6, 60, 22, 72], fill=(200, 200, 200))
         d.text((28, 60), f"left out: too much shade ({len(dropped)})", fill=(30, 30, 30))
+    img.save(path, format="PNG")
+
+
+def write_hourly(path, times, hourly):
+    with open(path, "w", newline="", encoding="utf-8") as f:
+        wr = csv.writer(f)
+        wr.writerow(["time_utc", "kwh"])
+        wr.writerows((str(t), round(float(v), 4)) for t, v in zip(times, hourly))
+
+
+def options_png(fp, usable, items, path):
+    """The three layouts of one panel model side by side, with their totals underneath."""
+    pics = []
+    every = np.concatenate([k for _, _, k, _ in items]) if items else np.zeros(0)
+    scale = (every.min(), every.max()) if len(every) else None   # same colours in all three pictures
+    for name, layout, kwh, text in items:
+        buf = io.BytesIO()
+        panels_png(fp, usable, layout, kwh, buf, scale=scale)
+        pics.append((Image.open(buf).convert("RGB"), name, text))
+    w = sum(p.width for p, _, _ in pics) + 20 * (len(pics) - 1)
+    h = max(p.height for p, _, _ in pics) + 50
+    img = Image.new("RGB", (w, h), (255, 255, 255))
+    d = ImageDraw.Draw(img)
+    x = 0
+    for p, name, text in pics:
+        img.paste(p, (x, 0))
+        d.text((x + 6, p.height + 8), name, fill=(20, 20, 20))
+        d.text((x + 6, p.height + 26), text, fill=(70, 70, 70))
+        x += p.width + 20
     img.save(path)
 
 
 def shade_yield(laz_dir, address=None, lat=None, lon=None, usable_path=None,
-                weather_path=DEFAULT_PATH, out="roof", max_shade_loss=MAX_SHADE_LOSS, max_panels=None):
+                weather_path=DEFAULT_PATH, out="roof", max_shade_loss=MAX_SHADE_LOSS, max_panels=None,
+                panel_wp=420, layout_option="max", compare_wp=None):
+    """Steps 3 + 4. panel_wp and layout_option pick the layout the main outputs use;
+    compare_wp lists the panel wattages to work the three options out for (default: panel_wp only)."""
+    if layout_option not in {o["id"] for o in OPTIONS}:
+        raise SystemExit(f"unknown layout {layout_option}; choose from {[o['id'] for o in OPTIONS]}")
+    module = get_module(panel_wp)
+    wps = sorted({module.wp, *[get_module(w).wp for w in (compare_wp or [])]})
     record, fp = find_building(address, lat, lon)
     lroof = read_roof_from_tiles(fp, laz_dir, refcat=record.refcat)
     if lroof is None:
@@ -152,8 +215,7 @@ def shade_yield(laz_dir, address=None, lat=None, lon=None, usable_path=None,
         raise SystemExit(f"No weather file at {weather_path}. Run: python -m step03_simulate_generation.weather")
     weather = load_tmy(weather_path)
     usable = load_usable(usable_path) if usable_path else lroof.grid.cells_to_polygon(lroof.usable)
-    layout, kwh, loss, hourly, dropped = analyse(lroof, fp, laz_dir, weather, record.lat, record.lon,
-                                                 usable, max_shade_loss, max_panels)
+    surface = surface_model(fp, laz_dir)
 
     usable_fc = usable_geojson(usable)
     if usable_path:
@@ -162,10 +224,36 @@ def shade_yield(laz_dir, address=None, lat=None, lon=None, usable_path=None,
         usable_file = f"{out}_usable.geojson"
         Path(usable_file).write_text(json.dumps(usable_fc), encoding="utf-8")
 
+    variants, main = [], None
+    for wp in wps:
+        mod = MODULES[wp]
+        full, kwh, loss, _, dropped, per_panel = analyse(
+            lroof, fp, laz_dir, weather, record.lat, record.lon, usable, max_shade_loss, max_panels,
+            module=mod, surface=surface if surface[0] is not None else None)
+        pics = []
+        for o, keep, n_blocks, hourly in variants_for(full, kwh, per_panel, weather):
+            lay = full.subset(keep)
+            summary = summarise(lay, kwh[keep], loss[keep], hourly, weather)
+            hourly_file = f"{out}_hourly_{wp}_{o['id']}.csv"
+            write_hourly(hourly_file, weather.times, hourly)
+            variants.append({
+                "panel_wp": wp, "panel": mod.label, "option": o["id"], "name": o["name"], "rule": o["rule"],
+                "blocks": n_blocks, **summary, "hourly_file": hourly_file,
+                "panel_list": [{"x": round(p.centroid.x, 2), "y": round(p.centroid.y, 2),
+                                "kwh_year": round(float(k), 1), "corners": corners(p)}
+                               for p, k in zip(lay.panels, kwh[keep])]})
+            pics.append((f"{o['name']} ({wp} W)", lay, kwh[keep],
+                         f"{lay.count} panels, {lay.kwp:.1f} kWp, {summary['yearly_kwh']:,} kWh/yr"))
+            if wp == module.wp and o["id"] == layout_option:
+                main = (lay, kwh[keep], loss[keep], hourly, dropped)
+        if wp == module.wp:
+            options_png(fp, usable, pics, f"{out}_options.png")
+
+    layout, kwh, loss, hourly, dropped = main
     result = {
         "building": {"refcat": record.refcat, "address": record.catastro_address, "query": record.query},
         "yield": {**summarise(layout, kwh, loss, hourly, weather), "panels_left_out": len(dropped),
-                  "max_shade_loss": max_shade_loss},
+                  "max_shade_loss": max_shade_loss, "panel_wp": module.wp, "layout": layout_option},
         "usable_area_m2": round(usable.area, 1) if usable is not None else 0.0,
         "usable_file": usable_file,
         "roof": roof_summary(lroof, usable, usable_path),   # step 2 numbers
@@ -173,12 +261,10 @@ def shade_yield(laz_dir, address=None, lat=None, lon=None, usable_path=None,
         "panels": [{"x": round(p.centroid.x, 2), "y": round(p.centroid.y, 2),
                     "kwh_year": round(float(k), 1), "shade_loss": round(float(s), 3)}
                    for p, k, s in zip(layout.panels, kwh, loss)],
+        "variants": variants,
     }
     Path(f"{out}_yield.json").write_text(json.dumps(result, indent=2, default=str), encoding="utf-8")
-    with open(f"{out}_hourly.csv", "w", newline="", encoding="utf-8") as f:
-        wr = csv.writer(f)
-        wr.writerow(["time_utc", "kwh"])
-        wr.writerows((str(t), round(float(v), 4)) for t, v in zip(weather.times, hourly))
+    write_hourly(f"{out}_hourly.csv", weather.times, hourly)
     fc = {"type": "FeatureCollection",
           "crs": {"type": "name", "properties": {"name": "urn:ogc:def:crs:EPSG::25831"}},
           "features": [{"type": "Feature", "geometry": mapping(p),
@@ -201,13 +287,25 @@ def main():
                     help="leave out panels losing more than this share of their sun (default 0.4; 1 keeps all)")
     ap.add_argument("--max-panels", type=int,
                     help="keep only this many panels, best first (default: every panel that fits)")
+    ap.add_argument("--panel-wp", type=int, default=420, choices=sorted(MODULES),
+                    help="panel model for the main outputs: 420 (default) or 540 W")
+    ap.add_argument("--layout", default="max", choices=[o["id"] for o in OPTIONS],
+                    help="layout for the main outputs: max (fill the roof, default), neat or best")
+    ap.add_argument("--compare-wp", default="420,540",
+                    help="panel wattages to work out all three layouts for (default 420,540)")
     ap.add_argument("--out", default="roof", help="output name, without extension")
     args = ap.parse_args()
     if not args.address and (args.lat is None or args.lon is None):
         ap.error("give an address, or both --lat and --lon")
+    compare = [int(w) for w in args.compare_wp.split(",") if w.strip()]
     result = shade_yield(args.laz_dir, args.address, args.lat, args.lon, args.usable, args.weather, args.out,
-                         args.max_shade, args.max_panels)
+                         args.max_shade, args.max_panels, args.panel_wp, args.layout, compare)
     print(json.dumps({k: result.get(k) for k in ("building", "yield", "usable_area_m2")}, indent=2))
+    print("\nLayout options (choose with --panel-wp and --layout):")
+    for v in result["variants"]:
+        print(f"  {v['panel_wp']} W  {v['option']:<5} {v['name']:<14} {v['panels']:>4} panels "
+              f"{v['kwp']:>7.2f} kWp {v['yearly_kwh']:>8,} kWh/yr  {v['kwh_per_kwp'] or 0:>5} kWh/kWp")
+    print(f"Pictures: {args.out}_options.png")
 
 
 if __name__ == "__main__":

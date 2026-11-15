@@ -129,40 +129,107 @@
 
   function roof(D) {
     const F = D.facts;
-    $("roof-lede").textContent = `${D.meta.address}: ${fmt(F.panels.v)} panels on ${fmt(F.usable_m2.v)} m² of usable roof, ${fmt(F.kwp.v, 2)} kWp, about ${fmt(F.solar_kwh.v)} kWh a year (${fmt(F.kwh_per_kwp.v)} kWh per kWp). The roof is read from ICGC LiDAR and the sun from a PVGIS typical year.`;
-    // monthly bars
-    const m = D.roof.monthly_kwh;
-    const f = frame($("monthly"), 560, 240, { l: 48, r: 8, t: 22, b: 26 });
-    const max = niceMax(Math.max(...m));
-    yAxis(f, max, 4, (v) => fmt(v), "kWh");
-    const bw = f.iw / 12;
-    m.forEach((v, i) => {
-      const h = (v / max) * f.ih;
-      const x = f.m.l + i * bw + 3;
-      const r = el("rect", { x, y: f.m.t + f.ih - h, width: bw - 6, height: h, rx: 3, fill: css("--solar"), tabindex: 0 }, f.svg);
-      el("text", { x: x + (bw - 6) / 2, y: f.h - 8, "text-anchor": "middle", text: MONTHS[i] }, f.svg);
-      const show = (evt) => showTip(evt, MONTHS[i], [{ value: fmt(v) + " kWh", label: "solar", color: css("--solar") }]);
-      r.addEventListener("pointermove", show); r.addEventListener("focus", (e) => show({ clientX: e.target.getBoundingClientRect().x, clientY: e.target.getBoundingClientRect().y }));
-      r.addEventListener("pointerleave", hideTip); r.addEventListener("blur", hideTip);
-    });
-    // panel layout
-    const P = D.roof.panels;
-    const xs = P.map((p) => p.x), ys = P.map((p) => p.y), ks = P.map((p) => p.kwh);
-    const x0 = Math.min(...xs) - 2, x1 = Math.max(...xs) + 2, y0 = Math.min(...ys) - 2, y1 = Math.max(...ys) + 2;
-    const scale = 300 / Math.max(x1 - x0, y1 - y0);
-    const w = (x1 - x0) * scale, h = (y1 - y0) * scale;
-    const g = frame($("panels"), w + 20, h + 20, { l: 10, r: 10, t: 10, b: 10 });
-    const kmin = Math.min(...ks), kmax = Math.max(...ks);
-    const seq = ["--seq-2", "--seq-3", "--seq-4", "--seq-5"].map(css);
-    for (const p of P) {
-      const t = kmax > kmin ? (p.kwh - kmin) / (kmax - kmin) : 1;
-      const c = seq[Math.min(3, Math.floor(t * 4))];
-      const s = 1.0 * scale;
-      const r = el("rect", { x: 10 + (p.x - x0) * scale - s / 2, y: 10 + (y1 - p.y) * scale - s / 2, width: s, height: s, rx: 2, fill: c }, g.svg);
-      r.addEventListener("pointermove", (evt) => showTip(evt, "Panel", [{ value: fmt(p.kwh) + " kWh/yr", label: "" }]));
-      r.addEventListener("pointerleave", hideTip);
+    $("roof-lede").textContent = `${D.meta.address}: ${fmt(F.usable_m2.v)} m² of usable roof, read from ICGC LiDAR, with the sun from a PVGIS typical year. Pick how many panels to install: fill the whole roof, or only neat blocks of the best panels, as real installers do.`;
+    const V = D.roof.variants && D.roof.variants.length ? D.roof.variants : [{
+      option: "max", name: "Fill the roof", panel_wp: 420, rule: "every panel that fits and loses at most 40% of its sun to shade",
+      panels: F.panels.v, kwp: F.kwp.v, yearly_kwh: F.solar_kwh.v, kwh_per_kwp: F.kwh_per_kwp.v,
+      mean_shade_loss: D.roof.mean_shade_loss, monthly_kwh: D.roof.monthly_kwh,
+      panel_list: D.roof.panels.map((p) => ({ x: p.x, y: p.y, k: p.kwh })) }];
+    const chosen = D.roof.chosen || { panel_wp: 420, option: "max" };
+    const opts = [...new Map(V.map((v) => [v.option, v.name])).entries()];
+    const wps = [...new Set(V.map((v) => v.panel_wp))].sort((a, b) => a - b);
+    const state = { option: chosen.option, wp: chosen.panel_wp };
+    const pick = () => V.find((v) => v.option === state.option && v.panel_wp === state.wp) || V[0];
+
+    function segButtons(host, items, key) {
+      host.replaceChildren();
+      for (const [val, label] of items) {
+        const b = el("button", { type: "button", "aria-pressed": String(state[key] === val), text: label }, host);
+        b.addEventListener("click", () => {
+          state[key] = val;
+          for (const x of host.children) x.setAttribute("aria-pressed", String(x === b));
+          draw();
+        });
+      }
+      host.hidden = items.length < 2;
     }
-    $("panel-note").textContent = `${fmt(kmin)} to ${fmt(kmax)} kWh a year per panel. Tilt ${fmt(D.roof.tilt_deg)}°, mean shade loss ${pct(D.roof.mean_shade_loss)}; ${D.roof.panels_left_out} panels left out for too much shade.`;
+    segButtons($("layoutpick"), opts, "option");
+    segButtons($("wppick"), wps.map((w) => [w, w + " W panels"]), "wp");
+
+    // table of every layout
+    const t = $("layout-table");
+    t.replaceChildren();
+    const hr = el("tr", {}, el("thead", {}, t));
+    for (const h of ["Layout", "Panel", "Panels", "kWp", "kWh a year", "kWh per kWp"]) el("th", { text: h }, hr);
+    const tb = el("tbody", {}, t);
+    const rows = V.map((v) => {
+      const r = el("tr", {}, tb);
+      el("td", { text: v.name }, r);
+      el("td", { text: v.panel_wp + " W" }, r);
+      el("td", { class: "n", text: fmt(v.panels) }, r);
+      el("td", { class: "n", text: fmt(v.kwp, 1) }, r);
+      el("td", { class: "n", text: fmt(v.yearly_kwh) }, r);
+      el("td", { class: "n", text: fmt(v.kwh_per_kwp) }, r);
+      return [v, r];
+    });
+    const usedV = V.find((v) => v.option === chosen.option && v.panel_wp === chosen.panel_wp);
+    $("layout-used").textContent = `The rest of this page (spare power, neighbours, battery and money) uses ${usedV ? usedV.name.toLowerCase() + " with " + usedV.panel_wp + " W panels" : "the pipeline's layout"}. To use another layout there, rerun step 03 with --layout and --panel-wp, then steps 04-10. Block sizes and the share of the best panel are our assumptions (step 03, options.py); 540 W panel size is a typical catalogue panel.`;
+
+    function draw() {
+      const v = pick();
+      if (!v) return;
+      for (const [rv, r] of rows) r.classList.toggle("pick", rv === v);
+      $("layout-rule").textContent = `${v.name}: ${v.rule}.` + (v.blocks ? ` ${v.blocks} blocks.` : "");
+      const st = $("layout-stats");
+      st.replaceChildren();
+      for (const [label, val, unit] of [["Panels", fmt(v.panels), ""], ["Peak power", fmt(v.kwp, 1), "kWp"],
+        ["Solar a year", fmt(v.yearly_kwh), "kWh"], ["Per kWp", fmt(v.kwh_per_kwp), "kWh/kWp"]]) {
+        const s = el("div", { class: "stat" }, st);
+        el("span", { class: "label", text: label }, s);
+        const vv = el("span", { class: "value", text: val }, s);
+        if (unit) el("small", { text: unit }, vv);
+        s.appendChild(chip({ kind: "modelled", src: "step 03", note: "ICGC LiDAR + PVGIS typical year" }));
+      }
+      // monthly bars
+      const m = v.monthly_kwh || D.roof.monthly_kwh;
+      const f = frame($("monthly"), 560, 240, { l: 48, r: 8, t: 22, b: 26 });
+      const max = niceMax(Math.max(...m));
+      yAxis(f, max, 4, (x) => fmt(x), "kWh");
+      const bw = f.iw / 12;
+      m.forEach((val, i) => {
+        const h = (val / max) * f.ih;
+        const x = f.m.l + i * bw + 3;
+        const r = el("rect", { x, y: f.m.t + f.ih - h, width: bw - 6, height: h, rx: 3, fill: css("--solar"), tabindex: 0 }, f.svg);
+        el("text", { x: x + (bw - 6) / 2, y: f.h - 8, "text-anchor": "middle", text: MONTHS[i] }, f.svg);
+        const show = (evt) => showTip(evt, MONTHS[i], [{ value: fmt(val) + " kWh", label: "solar", color: css("--solar") }]);
+        r.addEventListener("pointermove", show); r.addEventListener("focus", (e) => show({ clientX: e.target.getBoundingClientRect().x, clientY: e.target.getBoundingClientRect().y }));
+        r.addEventListener("pointerleave", hideTip); r.addEventListener("blur", hideTip);
+      });
+      // panel drawing: same frame for every layout, same colours for every layout of one panel model
+      const all = V.flatMap((x) => x.panel_list);
+      const pts = all.flatMap((p) => p.c || [[p.x, p.y]]);
+      const xs = pts.map((q) => q[0]), ys = pts.map((q) => q[1]);
+      const ks = V.filter((x) => x.panel_wp === v.panel_wp).flatMap((x) => x.panel_list.map((p) => p.k));
+      const x0 = Math.min(...xs) - 2, x1 = Math.max(...xs) + 2, y0 = Math.min(...ys) - 2, y1 = Math.max(...ys) + 2;
+      const scale = 300 / Math.max(x1 - x0, y1 - y0);
+      const w = (x1 - x0) * scale, hh = (y1 - y0) * scale;
+      const g = frame($("panels"), w + 20, hh + 20, { l: 10, r: 10, t: 10, b: 10 });
+      const kmin = Math.min(...ks), kmax = Math.max(...ks);
+      const seq = ["--seq-2", "--seq-3", "--seq-4", "--seq-5"].map(css);
+      const X = (x) => 10 + (x - x0) * scale, Y = (y) => 10 + (y1 - y) * scale;
+      for (const p of v.panel_list) {
+        const tt = kmax > kmin ? (p.k - kmin) / (kmax - kmin) : 1;
+        const c = seq[Math.min(3, Math.floor(tt * 4))];
+        let r;
+        if (p.c) r = el("path", { d: "M" + p.c.map((q) => X(q[0]).toFixed(1) + "," + Y(q[1]).toFixed(1)).join("L") + "Z", fill: c, stroke: css("--panel"), "stroke-width": 0.6 }, g.svg);
+        else r = el("rect", { x: X(p.x) - scale / 2, y: Y(p.y) - scale / 2, width: scale, height: scale, rx: 2, fill: c }, g.svg);
+        r.addEventListener("pointermove", (evt) => showTip(evt, "Panel", [{ value: fmt(p.k) + " kWh/yr", label: "" }]));
+        r.addEventListener("pointerleave", hideTip);
+      }
+      const vk = v.panel_list.map((p) => p.k);
+      $("panel-note").textContent = v.panels ? `${fmt(Math.min(...vk))} to ${fmt(Math.max(...vk))} kWh a year per panel. Tilt ${fmt(D.roof.tilt_deg)}°, mean shade loss ${pct(v.mean_shade_loss)}.` : "No block on this roof is big enough for this layout.";
+    }
+    draw();
   }
 
   function surplus(D) {

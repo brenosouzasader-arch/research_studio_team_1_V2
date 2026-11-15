@@ -47,6 +47,24 @@ def profiles(times, series):
     return out
 
 
+def layout_variants(y):
+    """The step 03 layout options (fill the roof / neat blocks / best blocks, for each panel
+    wattage), for the website's layout switch. Older yield files have none: then the one
+    layout they hold is shown as "Fill the roof" with 420 W panels."""
+    keys = ("panel_wp", "panel", "option", "name", "rule", "blocks", "panels", "kwp", "yearly_kwh",
+            "kwh_per_kwp", "mean_shade_loss", "monthly_kwh")
+    if y.get("variants"):
+        return [{**{k: v.get(k) for k in keys},
+                 "panel_list": [{"c": p["corners"], "k": p["kwh_year"]} for p in v["panel_list"]]}
+                for v in y["variants"]]
+    yl = y["yield"]
+    return [{"panel_wp": 420, "panel": "420 W, 1.76 x 1.13 m (default)", "option": "max",
+             "name": "Fill the roof", "rule": "every panel that fits and loses at most 40% of its sun to shade",
+             "blocks": None, **{k: yl.get(k) for k in ("panels", "kwp", "yearly_kwh", "kwh_per_kwp",
+                                                        "mean_shade_loss", "monthly_kwh")},
+             "panel_list": [{"x": p["x"], "y": p["y"], "k": p["kwh_year"]} for p in y["panels"]]}]
+
+
 def monthly_solar_days(times, gen):
     hour, _ = local_hour(times)
     month = times.astype("datetime64[M]").astype(int) % 12
@@ -245,7 +263,9 @@ def main():
         "roof": {"monthly_kwh": yl["monthly_kwh"], "tilt_deg": yl["tilt_deg"], "azimuth_deg": yl["azimuth_deg"],
                  "mean_shade_loss": yl["mean_shade_loss"], "panels_left_out": yl["panels_left_out"],
                  "solar_day_by_month": monthly_solar_days(times, gen),
-                 "panels": [{"x": p["x"], "y": p["y"], "kwh": p["kwh_year"]} for p in y["panels"]]},
+                 "panels": [{"x": p["x"], "y": p["y"], "kwh": p["kwh_year"]} for p in y["panels"]],
+                 "variants": layout_variants(y),
+                 "chosen": {"panel_wp": yl.get("panel_wp", 420), "option": yl.get("layout", "max")}},
         "host": {"surplus_by_month_kwh": hs["surplus_by_month_kwh"], "surplus_map": smap,
                  "first_day": str(times[0].astype("datetime64[D]"))},
         "buildings": buildings,

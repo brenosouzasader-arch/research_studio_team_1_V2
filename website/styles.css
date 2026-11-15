@@ -172,3 +172,4 @@ tr.pick td { background: var(--accent-soft); }
   .grid2, .grid3 { grid-template-columns: minmax(0, 1fr); }
   .wrap { gap: 56px; }
 }
+#layout-stats { grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); }

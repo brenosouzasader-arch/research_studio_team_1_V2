@@ -65,6 +65,20 @@ To rank several candidate hosts: make `roofs.csv` with a column `address` (optio
 - Panels on a roof the LiDAR misses (new buildings since 2023) are not shaded correctly.
 - No snow, no soiling seasons, no inverter clipping.
 
+## Layout options and panel size (`--layout`, `--panel-wp`)
+
+Real installers build neat blocks on the best part of a roof and leave out single panels and weaker spots. So every run works out three layouts, for both 420 W and 540 W panels (`--compare-wp 420,540`):
+
+| Option | What it keeps |
+|---|---|
+| `max` Fill the roof | every panel that fits (default) |
+| `neat` Neat blocks | rectangles of 6+ panels (3+ per row), each panel at least 85% of the roof's best |
+| `best` Best blocks | rectangles of 8+ panels (4+ per row), each panel at least 93% of the roof's best |
+
+"The roof's best" is the 90th-percentile panel. Block sizes and the 85% / 93% cut-offs are ASSUMPTIONS (see `options.py` and docs/SOURCES.md). The run prints a table of all six layouts and draws them in `<out>_options.png`. Each has its own hourly file `<out>_hourly_<W>_<option>.csv`, and all are listed under `variants` in `<out>_yield.json`; the website shows them with a switch. `--layout neat --panel-wp 540` makes that layout the main output (`<out>_hourly.csv`), which steps 04-09 use.
+
+First test, CEP9 school (15 Nov 2026): the real system is 108 panels of 540 W in tidy rows; our "fill the roof" placed 197 of 420 W, including about 85 scattered on the cluttered south roof.
+
 ## Fewer panels (`--max-panels`)
 
 By default every panel that fits is placed (team decision, 15 Nov 2026: fill the roof). After seeing the money in step 09, you can try a smaller system: `--max-panels 30` keeps the 30 panels that produce most and writes a new hourly file. Then run steps 04 to 09 again with it.

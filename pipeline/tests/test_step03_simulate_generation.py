@@ -191,3 +191,49 @@ def test_batch_reads_each_lidar_tile_once(tmp_path, monkeypatch):
     tile = tmp_path / "t.laz"
     first = laspy.read(tile)
     assert laspy.read(str(tile)) is first and len(calls) == 1
+
+
+# ---- layout options (options.py) -----------------------------------------------
+from step03_simulate_generation import options as layout_options
+
+
+def test_blocks_are_rectangles_and_drop_stragglers():
+    # a 3 x 6 block of good panels, plus one lonely panel and a 1 x 2 stub
+    cells = [(r, c) for r in range(3) for c in range(6)] + [(5, 0), (5, 8), (5, 9)]
+    good = np.ones(len(cells), bool)
+    found = layout_options.blocks(cells, good, min_row=3, min_panels=6)
+    assert len(found) == 1 and len(found[0]) == 18
+
+
+def test_weak_panels_are_left_out_of_best_blocks():
+    cells = [(r, c) for r in range(2) for c in range(8)]
+    kwh = np.full(len(cells), 600.0)
+    kwh[[0, 8]] = 400.0                      # the first column is shaded
+    keep, n = layout_options.choose(cells, kwh, layout_options.OPTIONS[2])
+    assert n == 1 and keep.sum() == 14 and not keep[0] and not keep[8]
+    every, _ = layout_options.choose(cells, kwh, layout_options.OPTIONS[0])
+    assert every.all()
+
+
+def test_540_w_panels_are_bigger_and_count_more_kwp():
+    from step02_pv_capacity.layout import MODULES
+    roof = box(0, 0, 20, 10)
+    eixample = box(0, 0, 20, 10)
+    small = lay_out(roof, eixample, module=MODULES[420])
+    big = lay_out(roof, eixample, module=MODULES[540])
+    assert big.count < small.count
+    assert big.kwp == pytest.approx(big.count * 0.54)
+    assert len(small.cells) == small.count
+
+
+def test_shade_yield_writes_all_variants(offline, tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    res = shade_yield.shade_yield(str(offline), "test", weather_path=str(offline / "tmy.json"),
+                                  out=str(tmp_path / "r"), compare_wp=[540])
+    ids = {(v["panel_wp"], v["option"]) for v in res["variants"]}
+    assert ids == {(w, o) for w in (420, 540) for o in ("max", "neat", "best")}
+    assert (tmp_path / "r_options.png").exists()
+    maxv = next(v for v in res["variants"] if v["panel_wp"] == 420 and v["option"] == "max")
+    assert maxv["panels"] == res["yield"]["panels"]
+    for v in res["variants"]:
+        assert v["panels"] <= maxv["panels"] or v["panel_wp"] == 540

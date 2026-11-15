@@ -77,6 +77,8 @@ No source was found for an installed price of a 20-500 kWh building battery in E
 
 | Assumption | Value | Where in the code |
 |---|---|---|
+| Panel models: 420 W at 1.76 x 1.13 m (default) and 540 W at 2.28 x 1.13 m | typical catalogue panels; 540 W chosen because CEP9 = 58.32 kWp / 108 panels = 540 W each [CEP9 presentation] | `step02_pv_capacity/layout.py` (`MODULES`) |
+| Layout options "neat blocks" and "best blocks" | rectangles of 6+ / 8+ panels, 3+ / 4+ per row, panels at least 85% / 93% of the roof's 90th-percentile panel; chosen to look like real rooftop systems | `step03_simulate_generation/options.py` (`OPTIONS`) |
 | LFP installed price | €500 per kWh | `step06_prices_and_battery/battery_types.py` (`LFP_CAPEX_EUR_PER_KWH`) |
 | Sodium-ion round trip, cycle life, calendar life | 85%, 3,000, 12 years | `battery_types.py` |
 | Second-life EV round trip, cycle life, price | 80%, 2,000, 50% of new | `battery_types.py` |

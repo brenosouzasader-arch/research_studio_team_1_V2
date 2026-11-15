@@ -30,25 +30,27 @@ def plane_of_array(weather, sun_elev, sun_az, lit, svf, tilt_deg, azimuth_deg):
     return beam[None, :] * lit + svf[:, None] * diffuse[None, :] + ground[None, :]
 
 
-def panel_output(poa, temp):
-    """AC kWh per panel per hour from sun on the panel (W/m2) and air temperature."""
+def panel_output(poa, temp, wp=PANEL_WP):
+    """AC kWh per panel per hour from sun on the panel (W/m2), air temperature and panel watts."""
     cell = temp[None, :] + poa / 800.0 * NOCT_RISE
     heat = 1 + TEMP_COEFF * (cell - 25.0)
-    return poa / 1000.0 * PANEL_WP / 1000.0 * heat * (1 - SYSTEM_LOSSES)
+    return poa / 1000.0 * wp / 1000.0 * heat * (1 - SYSTEM_LOSSES)
 
 
-def yield_for_layout(layout, horizon, weather, lat, lon, max_shade_loss=None, max_panels=None):
+def yield_for_layout(layout, horizon, weather, lat, lon, max_shade_loss=None, max_panels=None,
+                     per_panel=False):
     """Returns per-panel yearly kWh, per-panel shade loss (0-1), the roof's hourly kWh and
     which panels are kept. Panels losing more than max_shade_loss of their sun are left
     out of the hourly total (None keeps them all). max_panels keeps only that many of the
-    remaining panels, the best-producing first (to try a smaller system in step 09)."""
+    remaining panels, the best-producing first (to try a smaller system in step 09).
+    per_panel=True also returns the (n_panels, n_hours) kWh array, for the layout options."""
     elev, az = sun_position(weather.times, lat, lon)
     n = horizon.shape[0]
     svf = sky_view(horizon)
     lit = is_lit(horizon, elev, az)
     poa = plane_of_array(weather, elev, az, lit, svf, layout.tilt_deg, layout.azimuth_deg)
     open_poa = plane_of_array(weather, elev, az, np.ones_like(lit), np.ones(n), layout.tilt_deg, layout.azimuth_deg)
-    kwh = panel_output(poa, weather.temp)
+    kwh = panel_output(poa, weather.temp, layout.module.wp)
     shade_loss = 1 - poa.sum(axis=1) / np.maximum(open_poa.sum(axis=1), 1e-9)
     keep = np.ones(n, bool) if max_shade_loss is None else shade_loss <= max_shade_loss
     yearly = kwh.sum(axis=1)
@@ -56,4 +58,6 @@ def yield_for_layout(layout, horizon, weather, lat, lon, max_shade_loss=None, ma
         ranked = [i for i in np.argsort(-yearly) if keep[i]]
         keep = np.zeros(n, bool)
         keep[ranked[:max_panels]] = True
+    if per_panel:
+        return kwh.sum(axis=1), shade_loss, kwh[keep].sum(axis=0), keep, kwh
     return kwh.sum(axis=1), shade_loss, kwh[keep].sum(axis=0), keep
