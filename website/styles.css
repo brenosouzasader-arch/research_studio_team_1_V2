@@ -287,3 +287,4 @@ tr.pick td { background: var(--accent-soft); font-weight: 600; }
 .seg.tabs { flex-wrap: wrap; }
 .seg.tabs button { white-space: nowrap; }
 #validation-table td.close { font-weight: 700; color: var(--measured); }
+#panels .roof-label { font: 600 10px var(--body); fill: var(--ink-2); }

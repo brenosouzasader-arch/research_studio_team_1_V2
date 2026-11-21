@@ -14,7 +14,29 @@ from pathlib import Path
 from .export_site_data import actual_variant, layout_variants
 
 
-def update_roof(yield_json, actual_json=None, below_note="", out="../website/data/site_data.json", chosen="actual", label=None):
+def _rings(geojson_path, to_utm=False, only_role=None, tol=0.2):
+    """Outer rings ([[x, y], ...] in EPSG:25831, rounded to 0.1 m) of the polygons in a GeoJSON file."""
+    import shapely
+    from pyproj import Transformer
+    from shapely.geometry import shape
+    fc = json.loads(Path(geojson_path).read_text(encoding="utf-8"))
+    tr = Transformer.from_crs("EPSG:4326", "EPSG:25831", always_xy=True).transform if to_utm else None
+    out = []
+    for f in fc["features"]:
+        props = f.get("properties") or {}
+        if only_role and props.get("role") != only_role:
+            continue
+        g = shape(f["geometry"])
+        if tr:
+            g = shapely.transform(g, lambda c: __import__("numpy").column_stack(tr(c[:, 0], c[:, 1])))
+        for part in getattr(g.simplify(tol), "geoms", [g.simplify(tol)]):
+            if part.area >= 1:
+                out.append({"name": props.get("name", ""), "c": [[round(x, 1), round(y, 1)] for x, y in part.exterior.coords]})
+    return out
+
+
+def update_roof(yield_json, actual_json=None, below_note="", out="../website/data/site_data.json", chosen="actual", label=None,
+                footprints=None, usable=(), reserved=None):
     ry = json.loads(Path(yield_json).read_text(encoding="utf-8"))
     data = json.loads(Path(out).read_text(encoding="utf-8"))
     variants = layout_variants(ry)
@@ -30,6 +52,10 @@ def update_roof(yield_json, actual_json=None, below_note="", out="../website/dat
         "variants": variants,
         "separate": bool(below_note), "below_note": below_note,
         "chosen": {"panel_wp": yl.get("panel_wp", 540), "option": chosen},
+        # drawn under the panels so the layouts sit on their buildings
+        "outlines": _rings(footprints, to_utm=True, only_role="host") if footprints else [],
+        "usable_areas": [r for u in usable for r in _rings(u, tol=0.3)],
+        "reserved_areas": _rings(reserved) if reserved else [],
     })
     Path(out).write_text(json.dumps(data, separators=(",", ":"), ensure_ascii=False), encoding="utf-8")
     print(f"roof section of {out}: " + "; ".join(f"{v['name']} {v['panel_wp']} W: {v['panels']} panels" for v in variants))
@@ -41,9 +67,13 @@ def main():
     ap.add_argument("--actual", help="JSON of the real system (e.g. examples\\cep9_actual.json); adds the Actual tab")
     ap.add_argument("--below-note", default="", help="sentence saying which roof run the sections below still use")
     ap.add_argument("--label", help="what the roof section calls the roof(s), e.g. 'CEP9, Escola Pere IV + Institut Quatre Cantons'")
+    ap.add_argument("--footprints", help="step 01 case map (cases/<case>_map.geojson, WGS84): host roof outlines to draw")
+    ap.add_argument("--usable", action="append", default=[], help="step 02 <out>_usable.geojson to draw as the usable roof; repeat per roof")
+    ap.add_argument("--reserved", help="reserved-areas GeoJSON (EPSG:25831) given to step 02, drawn dashed")
     ap.add_argument("--out", default="../website/data/site_data.json")
     a = ap.parse_args()
-    update_roof(a.yield_json, a.actual, a.below_note, a.out, label=a.label)
+    update_roof(a.yield_json, a.actual, a.below_note, a.out, label=a.label,
+                footprints=a.footprints, usable=a.usable, reserved=a.reserved)
 
 
 if __name__ == "__main__":

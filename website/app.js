@@ -446,12 +446,14 @@
         r.addEventListener("pointermove", show); r.addEventListener("focus", (e) => show({ clientX: e.target.getBoundingClientRect().x, clientY: e.target.getBoundingClientRect().y }));
         r.addEventListener("pointerleave", hideTip); r.addEventListener("blur", hideTip);
       });
-      $("panels-key").textContent = v.actual ? "outlined = real panel blocks" : "darker = produces more; grey = left out";
+      $("panels-key").textContent = v.actual ? "outlined = real panel blocks" : (actualV && actualV.traced ? "pink outline = real panels; " : "") + "darker = produces more; grey = left out; cream = usable roof";
       $("how-card").hidden = !!v.actual;
       if (v.actual) { drawActual(v); return; }
       // panel drawing: same frame for every layout, same colours for every layout of one panel model
       const all = V.flatMap((x) => x.panel_list);
-      const pts = [...all.flatMap((p) => p.c || [[p.x, p.y]]), ...V.flatMap((x) => (x.left_out || []).flatMap((p) => p.c))];
+      const outlines = D.roof.outlines || [], usableA = D.roof.usable_areas || [], reservedA = D.roof.reserved_areas || [];
+      const pts = [...all.flatMap((p) => p.c || [[p.x, p.y]]), ...V.flatMap((x) => (x.left_out || []).flatMap((p) => p.c)),
+        ...outlines.flatMap((o) => o.c)];
       const xs = pts.map((q) => q[0]), ys = pts.map((q) => q[1]);
       const ks = V.filter((x) => x.panel_wp === v.panel_wp).flatMap((x) => x.panel_list.map((p) => p.k));
       const x0 = Math.min(...xs) - 2, x1 = Math.max(...xs) + 2, y0 = Math.min(...ys) - 2, y1 = Math.max(...ys) + 2;
@@ -461,6 +463,19 @@
       const kmin = Math.min(...ks), kmax = Math.max(...ks);
       const seq = ["--seq-2", "--seq-3", "--seq-4", "--seq-5"].map(css);
       const X = (x) => 10 + (x - x0) * scale, Y = (y) => 10 + (y1 - y) * scale;
+      // the buildings under the panels: roof outline, usable roof (step 02), areas kept free
+      const ring = (c) => "M" + c.map((q) => X(q[0]).toFixed(1) + "," + Y(q[1]).toFixed(1)).join("L") + "Z";
+      for (const o of outlines) el("path", { d: ring(o.c), fill: css("--paper-2"), stroke: css("--ink-3"), "stroke-width": 1.2, "stroke-linejoin": "round" }, g.svg);
+      for (const u of usableA) el("path", { d: ring(u.c), fill: css("--solar-soft"), stroke: "none" }, g.svg);
+      for (const r of reservedA) {
+        const rp = el("path", { d: ring(r.c), fill: "none", stroke: css("--ink-3"), "stroke-width": 1, "stroke-dasharray": "4 3" }, g.svg);
+        rp.addEventListener("pointermove", (evt) => showTip(evt, "Left out", [{ value: r.name || "reserved", label: "kept free (assumption)" }]));
+        rp.addEventListener("pointerleave", hideTip);
+      }
+      for (const o of outlines) {
+        const c = o.c.reduce((a, q) => [a[0] + q[0] / o.c.length, a[1] + q[1] / o.c.length], [0, 0]);
+        const t = el("text", { x: X(c[0]), y: Y(Math.max(...o.c.map((q) => q[1]))) - 4, "text-anchor": "middle", class: "roof-label", text: o.name }, g.svg);
+      }
       // panels this layout drops, with the reason, drawn first so the kept ones sit on top
       for (const p of v.left_out || []) {
         const weak = p.why === "weak";
@@ -476,6 +491,11 @@
         else r = el("rect", { x: X(p.x) - scale / 2, y: Y(p.y) - scale / 2, width: scale, height: scale, rx: 2, fill: c }, g.svg);
         r.addEventListener("pointermove", (evt) => showTip(evt, "Panel", [{ value: fmt(p.k) + " kWh/yr", label: "" }]));
         r.addEventListener("pointerleave", hideTip);
+      }
+      // where the real panels are (step 02 on the photo), outlined on top for comparison
+      for (const t of (actualV && actualV.traced) || []) {
+        el("path", { d: ring(t.c), fill: "none", stroke: css("--panel"), "stroke-width": 3, "stroke-linejoin": "round", "pointer-events": "none" }, g.svg);
+        el("path", { d: ring(t.c), fill: "none", stroke: css("--actual"), "stroke-width": 1.4, "stroke-linejoin": "round", "pointer-events": "none" }, g.svg);
       }
       drawFunnel(v);
       const vk = v.panel_list.map((p) => p.k);
