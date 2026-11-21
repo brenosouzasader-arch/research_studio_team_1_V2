@@ -12,6 +12,35 @@
 
 Usable area = free surface minus 1 m along the edge and 0.5 m around obstacles, keeping pieces where at least one panel fits.
 
+## Existing panels vs room for new ones (`existing_panels.py`, 21 Nov 2026)
+
+Step 02 now reads every roof from the step 01 footprint, the LiDAR **and** the orthophoto. Panels already on the roof are found on the photo as neutral grey or blue, textured areas (the bare roof here is warm-coloured and smooth). Then they are checked against the LiDAR: a panel block must sit on a roof surface, not on a wall. The LiDAR also gives each block's "ripple", meaning the stripes that tilted panel rows make. All limits are ASSUMPTIONS, tuned by eye on the two CEP9 roofs.
+
+Each reading reports:
+- `existing_panels_m2` and `existing_panels_estimate`, the count worked out as area x 0.75 / panel area (ASSUMPTION: 75% of a block is panel, the rest row gaps);
+- `usable_empty_roof_m2`, the roof as if no panels were there;
+- `usable_new_only_m2`, room for new panels beside the existing ones.
+
+`--roof-state empty` (default) or `existing` picks which one goes to step 03. `<out>_existing_panels.geojson` holds the panel areas, and the preview colours them blue.
+
+**CEP9 validation (both roofs, roof treated as empty):**
+
+| Roof | Panel-like area found | Estimate (540 W) | Real (Breno's count) | Our 540 W neat blocks |
+|---|---|---|---|---|
+| Institut Quatre Cantons (yellow) | 305 m² | 89 | 65 | 63, on the same spots as the real blocks |
+| Escola Pere IV (red) | 371 m² | 108 | 43 | 92 |
+
+On the red roof the "panels" are light-blue rows that the LiDAR sees as flat. Some of them may be skylights rather than panels, which is still to be checked. To run it:
+
+```
+python -m step02_pv_capacity.read_roof "Camí Antic de València 35, Barcelona" --laz-dir data\lidar --out data\roof\cep9_red
+python -m step02_pv_capacity.read_roof --lat 41.404361 --lon 2.2 --laz-dir data\lidar --out data\roof\cep9_yellow
+python -m step03_simulate_generation.shade_yield "Camí Antic de València 35, Barcelona" --laz-dir data\lidar --usable data\roof\cep9_red_usable.geojson --panel-wp 540 --layout neat --out data\pv\cep9_v2\red
+python -m step03_simulate_generation.shade_yield --lat 41.404361 --lon 2.2 --laz-dir data\lidar --usable data\roof\cep9_yellow_usable.geojson --panel-wp 540 --layout neat --out data\pv\cep9_v2\yellow
+python -m step03_simulate_generation.combine_roofs --roof red=data\pv\cep9_v2\red_yield.json --roof yellow=data\pv\cep9_v2\yellow_yield.json --out data\pv\cep9_v2\cep9
+python -m step09_publish_report.update_roof --yield examples\cep9_both\cep9_yield.json --actual examples\cep9_actual.json --label "..." --below-note "..."
+```
+
 ```
 python -m step02_pv_capacity.read_roof "Carrer de Jordi Girona 29, Barcelona" --laz-dir data\lidar --out nexus2
 ```

@@ -110,12 +110,17 @@
           <div class="card-head">
             <h3>Choose a panel layout</h3>
             <div class="controls">
-              <div class="seg" role="group" aria-label="Layout" id="layoutpick"></div>
-              <div class="seg" role="group" aria-label="Panel model" id="wppick"></div>
+              <div class="seg tabs" role="group" aria-label="Layout" id="layoutpick"></div>
             </div>
           </div>
           <p class="note" id="layout-rule"></p>
           <div class="stats" id="layout-stats"></div>
+        </div>
+        <div class="card" id="validation-card" hidden>
+          <div class="card-head"><h3>Validation: our layouts against the real panels</h3><span class="chip" data-kind="reported">reported · CEP9</span></div>
+          <p class="note" id="validation-note"></p>
+          <div class="table-wrap"><table id="validation-table"></table></div>
+          <p class="small" id="validation-detected"></p>
         </div>
         <div class="grid3">
           <div class="card">
@@ -134,8 +139,8 @@
           <ol class="note steps-list">
             <li><b>Fit.</b> Panel rows are laid on the usable roof, as many as fit.</li>
             <li><b>Shade.</b> Panels that lose more than 40% of their sun to shade are dropped.</li>
-            <li><b>Cut-off.</b> Neat and best layouts drop panels below 85% / 93% of the roof's best panel (<i>weak</i>).</li>
-            <li><b>Blocks.</b> Of the rest, only big enough rectangles are kept: at least 12 m² (neat) or 16 m² (best), at least 2 panels wide both ways, whichever way they run. Good panels outside such a block are dropped (<i>loose</i>).</li>
+            <li><b>Cut-off.</b> The neat layout drops panels below 85% of the roof's best panel (<i>weak</i>).</li>
+            <li><b>Blocks.</b> Of the rest, only big enough rectangles are kept: at least 12 m² of panels, at least 2 panels wide both ways, whichever way they run. Good panels outside such a block are dropped (<i>loose</i>).</li>
           </ol>
           <div id="funnel"></div>
           <div class="legend" id="funnel-legend"></div>

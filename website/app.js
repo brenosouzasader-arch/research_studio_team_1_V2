@@ -332,7 +332,7 @@
     const F = D.facts;
     const addr = D.roof.address || D.meta.address, usable = D.roof.usable_m2 != null ? D.roof.usable_m2 : F.usable_m2.v;
     $("roof-lede").textContent = `${addr}: ${fmt(usable)} m² of usable roof, read from ICGC LiDAR, with the sun from a PVGIS typical year. Pick how many panels to install: fill the whole roof, or only neat blocks of the best panels, as real installers do.` +
-      (D.roof.separate ? ` This section shows another roof than the sections below (${D.meta.address}).` : "");
+      (D.roof.separate ? " " + (D.roof.below_note || `This section shows another roof than the sections below (${D.meta.address}).`) : "");
     if (D.compare && D.compare.file) {
       $("compare-card").hidden = false;
       $("compare-img").src = /^(data:|https?:)/.test(D.compare.file) ? D.compare.file : "data/" + D.compare.file;
@@ -344,26 +344,24 @@
       mean_shade_loss: D.roof.mean_shade_loss, monthly_kwh: D.roof.monthly_kwh,
       panel_list: D.roof.panels.map((p) => ({ x: p.x, y: p.y, k: p.kwh })) }];
     const chosen = D.roof.chosen || { panel_wp: 420, option: "max" };
-    const opts = [...new Map(V.map((v) => [v.option, v.name])).entries()];
-    const wps = [...new Set(V.filter((v) => !v.actual).map((v) => v.panel_wp))].sort((a, b) => a - b);
-    const state = { option: chosen.option, wp: chosen.panel_wp };
-    const actual = V.find((v) => v.actual);
-    const pick = () => (state.option === "actual" ? actual : V.find((v) => v.option === state.option && v.panel_wp === state.wp)) || V[0];
-
-    function segButtons(host, items, key) {
-      host.replaceChildren();
-      for (const [val, label] of items) {
-        const b = el("button", { type: "button", "aria-pressed": String(state[key] === val), text: label }, host);
-        b.addEventListener("click", () => {
-          state[key] = val;
-          for (const x of host.children) x.setAttribute("aria-pressed", String(x === b));
-          draw();
-        });
-      }
-      host.hidden = items.length < 2;
+    // one tab per layout: Actual first, then each panel size with "fill the roof" before "neat blocks"
+    const keyOf = (v) => (v.actual ? "actual" : v.panel_wp + "_" + v.option);
+    const order = { max: 0, neat: 1, best: 2 };
+    const tabs = [...V].sort((a, b) => (a.actual ? -1 : b.actual ? 1 : a.panel_wp - b.panel_wp || order[a.option] - order[b.option]));
+    const state = { key: chosen.option === "actual" ? "actual" : chosen.panel_wp + "_" + chosen.option };
+    if (!tabs.some((v) => keyOf(v) === state.key)) state.key = keyOf(tabs[0]);
+    const pick = () => tabs.find((v) => keyOf(v) === state.key) || tabs[0];
+    const tabHost = $("layoutpick");
+    tabHost.replaceChildren();
+    for (const v of tabs) {
+      const b = el("button", { type: "button", "aria-pressed": String(keyOf(v) === state.key), text: v.actual ? "Actual" : `${v.panel_wp} W · ${v.name}` }, tabHost);
+      b.addEventListener("click", () => {
+        state.key = keyOf(v);
+        for (const x of tabHost.children) x.setAttribute("aria-pressed", String(x === b));
+        draw();
+      });
     }
-    segButtons($("layoutpick"), opts, "option");
-    segButtons($("wppick"), wps.map((w) => [w, w + " W panels"]), "wp");
+    validation(tabs);
 
     // table of every layout
     const t = $("layout-table");
@@ -382,17 +380,16 @@
       return [v, r];
     });
     const usedV = V.find((v) => v.option === chosen.option && v.panel_wp === chosen.panel_wp);
-    $("layout-used").textContent = (D.roof.separate ? `The sections below use another roof (${D.meta.address}).` : `The rest of this page (spare power, neighbours, battery and money) uses ${usedV ? usedV.name.toLowerCase() + " with " + usedV.panel_wp + " W panels" : "the pipeline's layout"}.`) + ` Block sizes and the share of the best panel are our assumptions (step 03, options.py); 540 W panel size is a typical catalogue panel. Next: to see the money for another layout, run steps 03-10 with --layout and --panel-wp for it.`;
+    $("layout-used").textContent = (D.roof.separate ? (D.roof.below_note || `The sections below use another roof (${D.meta.address}).`) : `The rest of this page (spare power, neighbours, battery and money) uses ${usedV ? usedV.name.toLowerCase() + " with " + usedV.panel_wp + " W panels" : "the pipeline's layout"}.`) + ` Block sizes and the share of the best panel are our assumptions (step 03, options.py); 540 W panel size is a typical catalogue panel. Next: to see the money for another layout, run steps 03-10 with --layout and --panel-wp for it.`;
 
     function draw() {
       const v = pick();
       if (!v) return;
       for (const [rv, r] of rows) r.classList.toggle("pick", rv === v);
-      $("wppick").hidden = !!v.actual || wps.length < 2;
       $("monthly-chip").dataset.kind = v.actual ? "reported" : "modelled";
       $("monthly-chip").textContent = v.actual ? "reported total · our monthly shape" : "modelled · step 03";
       $("layout-rule").textContent = v.actual
-        ? `The system that is really on the two roofs: ${fmt(v.panels)} panels, ${fmt(v.kwp, 2)} kWp and about ${fmt(v.yearly_kwh)} kWh a year [${v.source}]. ${v.panel_wp_note}. The CEP9 source gives no monthly figures and no panel plan, so the months follow our model's shape and the panel blocks are traced from the roof photo.` + (v.by_roof ? ` By roof: ${v.by_roof.map((r) => `${r.roof} ${r.panels} panels`).join(", ")} [${v.by_roof_source}].` : "")
+        ? `The system that is really on the two roofs: ${fmt(v.panels)} panels, ${fmt(v.kwp, 2)} kWp and about ${fmt(v.yearly_kwh)} kWh a year [${v.source}]. ${v.panel_wp_note}. The CEP9 source gives no monthly figures and no panel plan, so the months follow our model's shape and the panel areas are the ones step 02 finds on the roof photo. For this check the model treats both roofs as empty and lays its own panels, to see how close it gets to the real system.` + (v.by_roof ? ` By roof: ${v.by_roof.map((r) => `${r.roof} ${r.panels} panels`).join(", ")} [${v.by_roof_source}].` : "")
         : `${v.name}: ${v.rule}.` + (v.blocks ? ` ${v.blocks} blocks.` : "") + (v.roofs ? ` By roof: ${v.roofs.map((r) => `${r.roof} ${r.panels} panels`).join(", ")}.` : "");
       const st = $("layout-stats");
       st.replaceChildren();
@@ -470,6 +467,47 @@
       const vk = v.panel_list.map((p) => p.k);
       $("panel-note").textContent = v.panels ? `${fmt(Math.min(...vk))} to ${fmt(Math.max(...vk))} kWh a year per panel. Tilt ${fmt(D.roof.tilt_deg)}°, mean shade loss ${pct(v.mean_shade_loss)}.` : "No block on this roof is big enough for this layout. Next: try the other panel size, or check whether the block rules in options.py are too strict for this roof.";
     }
+    function validation(tabs) {
+      const act = tabs.find((v) => v.actual);
+      const roofs = D.roof.roofs || [];
+      if (!act || !act.by_roof || roofs.length < 2) return;
+      $("validation-card").hidden = false;
+      const lay = tabs.filter((v) => !v.actual);
+      const name = (r) => (act.by_roof.find((b) => b.roof.toLowerCase().includes(r)) || { roof: r }).roof;
+      const actualOn = (r) => (act.by_roof.find((b) => b.roof.toLowerCase().includes(r)) || {}).panels;
+      const t = $("validation-table");
+      t.replaceChildren();
+      const hr = el("tr", {}, el("thead", {}, t));
+      el("th", { text: "Roof" }, hr);
+      el("th", { text: "Actual", class: "n" }, hr);
+      for (const v of lay) el("th", { text: `${v.panel_wp} W ${v.name.toLowerCase()}`, class: "n" }, hr);
+      const tb = el("tbody", {}, t);
+      const near = (a, b) => (a && b ? Math.abs(b / a - 1) <= 0.1 : false);
+      for (const r of roofs) {
+        const tr = el("tr", {}, tb);
+        el("td", { text: name(r) + " · panels" }, tr);
+        const a = actualOn(r);
+        el("td", { class: "n", text: fmt(a) }, tr);
+        for (const v of lay) {
+          const n = ((v.roofs || []).find((x) => x.roof === r) || {}).panels;
+          el("td", { class: "n" + (near(a, n) ? " close" : ""), text: fmt(n) }, tr);
+        }
+      }
+      for (const [label, k, d] of [["Both roofs · panels", "panels", 0], ["Both roofs · kWp", "kwp", 1], ["Both roofs · kWh a year", "yearly_kwh", 0]]) {
+        const tr = el("tr", {}, tb);
+        el("td", { text: label }, tr);
+        el("td", { class: "n", text: fmt(act[k], k === "kwp" ? 2 : d) }, tr);
+        for (const v of lay) el("td", { class: "n" + (near(act[k], v[k]) ? " close" : ""), text: fmt(v[k], d) }, tr);
+      }
+      const n540 = lay.find((v) => v.panel_wp === act.panel_wp && v.option === "neat");
+      $("validation-note").textContent = "Both roofs are treated as empty, so our tool lays its own panels and we compare them with what CEP9 really installed. The target is the 540 W neat-blocks layout (the real panels are 540 W)." +
+        (n540 ? ` Today it gives ${fmt(n540.panels)} panels against ${fmt(act.panels)} real ones (${n540.panels >= act.panels ? "+" : ""}${pct(n540.panels / act.panels - 1)}) and ${fmt(n540.yearly_kwh)} kWh against ${fmt(act.yearly_kwh)} reported (${n540.yearly_kwh >= act.yearly_kwh ? "+" : ""}${pct(n540.yearly_kwh / act.yearly_kwh - 1)}).` : "") +
+        " Bold green: within 10% of the real value.";
+      const det = act.detected;
+      $("validation-detected").textContent = `Real panel counts by roof: ${act.by_roof_source}.` +
+        (det ? ` For comparison, step 02 finds ${Object.entries(det).map(([r, x]) => `${fmt(x.existing_panels_m2)} m² of panel-like surface on the ${r} roof (about ${fmt(x.existing_panels_estimate)} panels of 540 W)`).join(" and ")}; on the red roof part of that may be skylights, not panels (to check).` : "");
+    }
+
     function drawFunnel(v) {
       const host = $("funnel"), lg = $("funnel-legend");
       host.replaceChildren(); lg.replaceChildren();
@@ -518,7 +556,7 @@
       }
       const area = v.traced.reduce((a, t) => a + t.area_m2, 0);
       const diff = v.model_kwh_per_kwp ? (v.model_kwh_per_kwp / v.kwh_per_kwp - 1) : null;
-      $("panel-note").textContent = `Outlined: ${v.traced.length} panel blocks (${fmt(area)} m²) traced by ${v.traced_by}. Not checked against an installer plan. ` +
+      $("panel-note").textContent = `Outlined: ${v.traced.length} panel areas (${fmt(area)} m²) found by ${v.traced_by}. Not checked against an installer plan. ` +
         (v.model_kwh_per_kwp ? `On these spots our model gives ${fmt(v.model_kwh_per_kwp)} kWh per kWp, against ${fmt(v.kwh_per_kwp)} reported (${diff >= 0 ? "+" : ""}${pct(diff)}), from the ${v.model_panels_on_blocks} model panels inside the blocks.` : "") +
         (ph ? ` Photo: ${ph.source}.` : "");
     }

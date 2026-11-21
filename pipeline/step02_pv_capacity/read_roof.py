@@ -2,11 +2,19 @@
 
     python -m step02_pv_capacity.read_roof "Carrer de Jordi Girona 29, Barcelona" --laz-dir data/lidar --out nexus2
 
-LiDAR rules only. V1 also had an AI photo model (U-Net) here; it was left out of V2
-because the midterm reviewers said this step does not need AI. It is still in the V1
-repository (pipeline/step2/model.py, train.py, dataset.py) if we want it back.
+Rules only, no AI: LiDAR for the roof surfaces and obstacles, the orthophoto + LiDAR
+for panels already on the roof (existing_panels.py). V1 also had an AI photo model
+(U-Net) here; it was left out of V2 because the midterm reviewers said this step does
+not need AI. It is still in the V1 repository if we want it back.
+
+Two usable areas are reported:
+- "empty": as if the existing panels were not there (default; used to validate our
+  layout against the real panels on the CEP9 school);
+- "new only": room for new panels beside the existing ones.
+--roof-state picks which one goes into <out>_usable.geojson for step 03.
 
 Writes <out>.json (numbers), <out>_usable.geojson (usable area, EPSG:25831),
+<out>_existing_panels.geojson (panel blocks found on the photo),
 <out>_preview.png (photo with the reading on top), <out>_photo.png (the plain
 roof photo) and <out>_height.png (LiDAR height above the main roof level).
 """
@@ -21,9 +29,10 @@ from shapely.geometry import mapping
 
 from step01_select_host.find_building import find_building
 
-from . import ortho
+from . import existing_panels, ortho
 from .grid import upsample
-from .lidar_roof import read_roof_from_tiles
+from .layout import get_module
+from .lidar_roof import read_roof_from_tiles, usable_mask
 
 MIN_LIDAR_COVERAGE = 0.9  # share of roof cells with LiDAR points
 FACTOR = 5                # 0.5 m LiDAR cell = 5 x 5 photo pixels at 0.1 m
@@ -104,7 +113,17 @@ def height_image(height, roof, path):
     Image.fromarray(out.astype(np.uint8)).save(path)
 
 
-def read_roof(laz_dir, address=None, lat=None, lon=None, out="roof"):
+def usable_with_panels(lroof, panels, roof_state):
+    """Usable cells when the existing panels are ignored ("empty") or kept ("existing")."""
+    lower = lroof.lower if lroof.lower is not None and not lroof.summary.get("lower_roofs_included") \
+        else np.zeros_like(lroof.roof)
+    free = (lroof.surface_id >= 0) & ~lower
+    if roof_state == "empty":
+        return usable_mask(lroof.roof, (free | panels) & ~lower, lroof.obstacle & ~panels, lroof.grid.res)
+    return usable_mask(lroof.roof, free & ~panels, lroof.obstacle | panels, lroof.grid.res)
+
+
+def read_roof(laz_dir, address=None, lat=None, lon=None, out="roof", roof_state="empty", panel_wp=540):
     record, fp = find_building(address, lat, lon)
     lroof = read_roof_from_tiles(fp, laz_dir, refcat=record.refcat)
     if lroof is None:
@@ -119,6 +138,21 @@ def read_roof(laz_dir, address=None, lat=None, lon=None, out="roof"):
 
     summary, usable, _, grid = lidar_only(lroof)
     classes = upsample(lidar_classes(lroof), FACTOR)
+
+    panels_fine = None
+    if rgb is not None:
+        panels_fine, panels, blobs = existing_panels.detect(rgb, lroof, FACTOR)
+        module = get_module(panel_wp)
+        summary.update(existing_panels.summary(blobs, module.long_m * module.short_m))
+        empty = usable_with_panels(lroof, panels, "empty")
+        new_only = usable_with_panels(lroof, panels, "existing")
+        summary["usable_empty_roof_m2"] = round(float(empty.sum() * grid.cell_area), 1)
+        summary["usable_new_only_m2"] = round(float(new_only.sum() * grid.cell_area), 1)
+        usable = empty if roof_state == "empty" else new_only
+        summary["usable_area_m2"] = round(float(usable.sum() * grid.cell_area), 1)
+        summary["roof_state"] = roof_state
+        summary["method"] = "lidar + photo (existing panels)"
+        classes[panels_fine] = CLASSES.index("solar_panel")
 
     result = {
         "building": {"refcat": record.refcat, "address": record.catastro_address,
@@ -135,6 +169,13 @@ def read_roof(laz_dir, address=None, lat=None, lon=None, out="roof"):
           "features": [] if poly is None else [{"type": "Feature", "geometry": mapping(poly),
                                                "properties": {"usable_area_m2": summary["usable_area_m2"]}}]}
     Path(f"{out}_usable.geojson").write_text(json.dumps(fc), encoding="utf-8")
+    if panels_fine is not None:
+        ppoly = grid.finer(FACTOR).cells_to_polygon(panels_fine)
+        pfc = {"type": "FeatureCollection",
+               "crs": {"type": "name", "properties": {"name": "urn:ogc:def:crs:EPSG::25831"}},
+               "features": [] if ppoly is None else [{"type": "Feature", "geometry": mapping(ppoly.simplify(0.1)),
+                                                     "properties": {"existing_panels_m2": summary["existing_panels_m2"]}}]}
+        Path(f"{out}_existing_panels.geojson").write_text(json.dumps(pfc), encoding="utf-8")
     roof_fine = upsample(lroof.roof, FACTOR)
     preview(rgb, classes, roof_fine, upsample(usable, FACTOR), f"{out}_preview.png")
     if rgb is not None:
@@ -150,11 +191,15 @@ def main():
     ap.add_argument("--lon", type=float)
     ap.add_argument("--laz-dir", required=True, help="folder with ICGC/CNIG LAZ tiles")
     ap.add_argument("--out", default="roof", help="output name, without extension")
+    ap.add_argument("--roof-state", choices=["empty", "existing"], default="empty",
+                    help="empty (default): ignore panels already on the roof; existing: keep them, usable = room for new ones")
+    ap.add_argument("--panel-wp", type=int, default=540, help="panel size used to estimate the existing panel count")
     args = ap.parse_args()
     if not args.address and (args.lat is None or args.lon is None):
         ap.error("give an address, or both --lat and --lon")
-    result = read_roof(args.laz_dir, args.address, args.lat, args.lon, args.out)
-    print(json.dumps({k: result.get(k) for k in ("building", "roof", "photo_error")}, indent=2, default=str))
+    result = read_roof(args.laz_dir, args.address, args.lat, args.lon, args.out, args.roof_state, args.panel_wp)
+    roof = {k: v for k, v in result["roof"].items() if k != "existing_panel_blocks"}
+    print(json.dumps({"building": result["building"], "roof": roof, "photo_error": result["photo_error"]}, indent=2, default=str))
 
 
 if __name__ == "__main__":

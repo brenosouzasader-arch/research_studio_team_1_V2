@@ -48,16 +48,19 @@ def profiles(times, series):
     return out
 
 
-def layout_variants(y):
-    """The step 03 layout options (fill the roof / neat blocks / best blocks, for each panel
-    wattage), for the website's layout switch. Older yield files have none: then the one
-    layout they hold is shown as "Fill the roof" with 420 W panels."""
+SITE_OPTIONS = ("max", "neat")   # layouts shown on the website: fill the roof and neat blocks (best blocks stays in step 03)
+
+
+def layout_variants(y, options=SITE_OPTIONS):
+    """The step 03 layout options shown on the website (fill the roof and neat blocks, for each
+    panel wattage). Older yield files have none: then the one layout they hold is shown as
+    "Fill the roof" with 420 W panels."""
     keys = ("panel_wp", "panel", "option", "name", "rule", "blocks", "panels", "kwp", "yearly_kwh",
             "kwh_per_kwp", "mean_shade_loss", "monthly_kwh", "funnel", "left_out", "roofs")
     if y.get("variants"):
         return [{**{k: v.get(k) for k in keys},
                  "panel_list": [{"c": p["corners"], "k": p["kwh_year"]} for p in v["panel_list"]]}
-                for v in y["variants"]]
+                for v in y["variants"] if v["option"] in options]
     yl = y["yield"]
     return [{"panel_wp": 420, "panel": "420 W, 1.76 x 1.13 m (default)", "option": "max",
              "name": "Fill the roof", "rule": "every panel that fits and loses at most 40% of its sun to shade",
@@ -95,7 +98,8 @@ def actual_variant(a, variants):
             "model_panels_on_blocks": len(inside),
             "model_kwh_per_kwp": round(model_per_kwp) if model_per_kwp else None,
             "model_yearly_kwh": round(model_per_kwp * a["kwp"]) if model_per_kwp else None,
-            "photo": a.get("photo"), "by_roof": a.get("by_roof"), "by_roof_source": a.get("by_roof_source")}
+            "photo": a.get("photo"), "by_roof": a.get("by_roof"), "by_roof_source": a.get("by_roof_source"),
+            "detected": a.get("detected")}
 
 
 def monthly_solar_days(times, gen):
