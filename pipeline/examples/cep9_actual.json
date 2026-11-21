@@ -661,68 +661,12 @@
       "roof": "red",
       "corners": [
         [
-          433155.9,
-          4584031.0
-        ],
-        [
-          433152.3,
-          4584031.2
-        ],
-        [
-          433152.4,
-          4584032.0
-        ],
-        [
-          433156.9,
-          4584032.4
-        ],
-        [
-          433156.9,
-          4584031.7
-        ],
-        [
-          433155.9,
-          4584031.0
-        ]
-      ]
-    },
-    {
-      "name": "Escola Pere IV (red) block 3",
-      "roof": "red",
-      "corners": [
-        [
-          433154.5,
-          4584027.7
-        ],
-        [
-          433158.1,
-          4584028.3
-        ],
-        [
-          433158.2,
-          4584027.0
-        ],
-        [
-          433155.0,
-          4584026.6
-        ],
-        [
-          433154.5,
-          4584027.7
-        ]
-      ]
-    },
-    {
-      "name": "Escola Pere IV (red) block 4",
-      "roof": "red",
-      "corners": [
-        [
           433166.6,
-          4583992.9
+          4583992.3
         ],
         [
-          433167.4,
-          4583994.1
+          433166.7,
+          4583993.2
         ],
         [
           433168.2,
@@ -761,21 +705,13 @@
           4583987.4
         ],
         [
-          433168.4,
-          4583990.7
-        ],
-        [
-          433166.7,
-          4583992.1
-        ],
-        [
           433166.6,
-          4583992.9
+          4583992.3
         ]
       ]
     },
     {
-      "name": "Escola Pere IV (red) block 5",
+      "name": "Escola Pere IV (red) block 3",
       "roof": "red",
       "corners": [
         [
@@ -825,16 +761,12 @@
       ]
     },
     {
-      "name": "Escola Pere IV (red) block 6",
+      "name": "Escola Pere IV (red) block 4",
       "roof": "red",
       "corners": [
         [
           433174.5,
-          4583979.0
-        ],
-        [
-          433174.0,
-          4583979.0
+          4583978.5
         ],
         [
           433174.0,
@@ -917,6 +849,10 @@
           4583980.3
         ],
         [
+          433178.3,
+          4583980.3
+        ],
+        [
           433177.6,
           4583980.5
         ],
@@ -929,8 +865,8 @@
           4583981.1
         ],
         [
-          433175.9,
-          4583980.5
+          433175.6,
+          4583979.6
         ],
         [
           433175.6,
@@ -941,38 +877,34 @@
           4583978.8
         ],
         [
-          433176.2,
-          4583977.8
-        ],
-        [
-          433175.0,
+          433176.4,
           4583978.0
         ],
         [
+          433175.5,
+          4583977.8
+        ],
+        [
           433174.5,
-          4583979.0
+          4583978.5
         ]
       ]
     },
     {
-      "name": "Escola Pere IV (red) block 7",
+      "name": "Escola Pere IV (red) block 5",
       "roof": "red",
       "corners": [
         [
-          433179.7,
-          4583988.1
-        ],
-        [
           433179.3,
-          4583989.7
+          4583989.6
         ],
         [
           433181.4,
           4583991.8
         ],
         [
-          433182.1,
-          4583991.8
+          433182.3,
+          4583991.6
         ],
         [
           433182.3,
@@ -989,6 +921,10 @@
         [
           433179.7,
           4583988.1
+        ],
+        [
+          433179.3,
+          4583989.6
         ]
       ]
     },
@@ -1478,12 +1414,14 @@
   "by_roof_source": "Breno's count, Google Earth image, 15 Nov 2026 (43 + 65 = 108, the reported number)",
   "detected": {
     "red": {
-      "existing_panels_m2": 371.3,
-      "existing_panels_estimate": 108
+      "existing_panels_m2": 361.4,
+      "existing_panels_estimate": 105
     },
     "yellow": {
       "existing_panels_m2": 305.4,
       "existing_panels_estimate": 89
     }
-  }
+  },
+  "not_panels": "two northernmost rows on Escola Pere IV are solar water heaters (Breno, 21 Nov 2026): not counted, kept as obstacles",
+  "reserved": "Escola Pere IV south-east part (464 m2) left out of the layout: ASSUMPTION, kept free for a future extension (Breno, not confirmed); examples/cep9_reserved.geojson"
 }

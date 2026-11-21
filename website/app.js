@@ -351,6 +351,7 @@
     const state = { key: chosen.option === "actual" ? "actual" : chosen.panel_wp + "_" + chosen.option };
     if (!tabs.some((v) => keyOf(v) === state.key)) state.key = keyOf(tabs[0]);
     const pick = () => tabs.find((v) => keyOf(v) === state.key) || tabs[0];
+    const actualV = tabs.find((v) => v.actual);
     const tabHost = $("layoutpick");
     tabHost.replaceChildren();
     for (const v of tabs) {
@@ -411,14 +412,22 @@
       const full = (V.find((x) => x.option === "max" && x.panel_wp === v.panel_wp) || {}).monthly_kwh;
       yAxis(f, max, 4, (x) => fmt(x), "kWh");
       const bw = f.iw / 12;
+      const defs = el("defs", {}, f.svg);
       if (v.actual) {
-        const pat = el("pattern", { id: "hatch", width: 6, height: 6, patternUnits: "userSpaceOnUse", patternTransform: "rotate(45)" }, el("defs", {}, f.svg));
+        const pat = el("pattern", { id: "hatch", width: 6, height: 6, patternUnits: "userSpaceOnUse", patternTransform: "rotate(45)" }, defs);
         el("rect", { width: 6, height: 6, fill: css("--solar-soft") }, pat);
         el("line", { x1: 0, y1: 0, x2: 0, y2: 6, stroke: css("--solar"), "stroke-width": 2.5 }, pat);
       }
+      // the real system's months, laid over every other layout so they can be compared tab by tab
+      const real = !v.actual && actualV && actualV.monthly_kwh ? actualV.monthly_kwh : null;
+      if (real) {
+        const pat = el("pattern", { id: "hatch-actual", width: 5, height: 5, patternUnits: "userSpaceOnUse", patternTransform: "rotate(-45)" }, defs);
+        el("line", { x1: 0, y1: 0, x2: 0, y2: 5, stroke: css("--actual"), "stroke-width": 1.6 }, pat);
+      }
       $("monthly-note").textContent = v.actual
         ? "Hatched: the reported yearly total spread over the months with our model's shape (CEP9 publishes no monthly figures). Same scale as the other layouts."
-        : "Same scale for every layout. The dashed outline is \"Fill the roof\" with the same panels.";
+        : "Same scale for every layout. The dashed outline is \"Fill the roof\" with the same panels." +
+          (real ? ` Pink hatched bars: the real system (${fmt(actualV.yearly_kwh)} kWh a year reported, spread over the months with our model's shape), shown on every layout for comparison.` : "");
       m.forEach((val, i) => {
         const h = (val / max) * f.ih;
         const x = f.m.l + i * bw + 3;
@@ -428,7 +437,12 @@
         }
         const r = el("rect", { x, y: f.m.t + f.ih - h, width: bw - 6, height: h, rx: 3, fill: v.actual ? "url(#hatch)" : css("--solar"), stroke: v.actual ? css("--solar") : "none", tabindex: 0 }, f.svg);
         el("text", { x: x + (bw - 6) / 2, y: f.h - 8, "text-anchor": "middle", text: MONTHS[i] }, f.svg);
-        const show = (evt) => showTip(evt, MONTHS[i], [{ value: fmt(val) + " kWh", label: v.actual ? "reported total, our monthly shape" : "solar", color: css("--solar") }]);
+        if (real) {
+          const ah = (real[i] / max) * f.ih;
+          el("rect", { x: x + 0.75, y: f.m.t + f.ih - ah, width: bw - 7.5, height: ah, rx: 3, fill: "url(#hatch-actual)", stroke: css("--actual"), "stroke-width": 1.5, "pointer-events": "none" }, f.svg);
+        }
+        const show = (evt) => showTip(evt, MONTHS[i], [{ value: fmt(val) + " kWh", label: v.actual ? "reported total, our monthly shape" : "solar, this layout", color: css("--solar") },
+          ...(real ? [{ value: fmt(real[i]) + " kWh", label: "real system (reported, our shape)", color: css("--actual") }] : [])]);
         r.addEventListener("pointermove", show); r.addEventListener("focus", (e) => show({ clientX: e.target.getBoundingClientRect().x, clientY: e.target.getBoundingClientRect().y }));
         r.addEventListener("pointerleave", hideTip); r.addEventListener("blur", hideTip);
       });
@@ -505,7 +519,8 @@
         " Bold green: within 10% of the real value.";
       const det = act.detected;
       $("validation-detected").textContent = `Real panel counts by roof: ${act.by_roof_source}.` +
-        (det ? ` For comparison, step 02 finds ${Object.entries(det).map(([r, x]) => `${fmt(x.existing_panels_m2)} m² of panel-like surface on the ${r} roof (about ${fmt(x.existing_panels_estimate)} panels of 540 W)`).join(" and ")}; on the red roof part of that may be skylights, not panels (to check).` : "");
+        (det ? ` For comparison, step 02 finds ${Object.entries(det).map(([r, x]) => `${fmt(x.existing_panels_m2)} m² of panel-like surface on the ${r} roof (about ${fmt(x.existing_panels_estimate)} panels of 540 W)`).join(" and ")}; the rows on the red roof are mostly panels (Breno).` : "") +
+        (act.check_notes && act.check_notes.length ? " " + act.check_notes.map((t) => t[0].toUpperCase() + t.slice(1) + ".").join(" ") : "");
     }
 
     function drawFunnel(v) {

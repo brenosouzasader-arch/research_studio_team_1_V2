@@ -28,9 +28,14 @@ Each reading reports:
 | Roof | Panel-like area found | Estimate (540 W) | Real (Breno's count) | Our 540 W neat blocks |
 |---|---|---|---|---|
 | Institut Quatre Cantons (yellow) | 305 m² | 89 | 65 | 63, on the same spots as the real blocks |
-| Escola Pere IV (red) | 371 m² | 108 | 43 | 92 |
+| Escola Pere IV (red) | 361 m² | 105 | 43 | 61 |
+| Both | | | 108 panels, 73,750 kWh | 124 panels (+15%), 90,005 kWh (+22%) |
 
-On the red roof the "panels" are light-blue rows that the LiDAR sees as flat. Some of them may be skylights rather than panels, which is still to be checked. To run it:
+Two rules on the red roof, both from Breno (21 Nov 2026):
+- The light-blue rows are mostly panels. The two northernmost rows are **solar water heaters**: they are listed in `not_panels.csv`, are not counted as panels, and stay on the roof as obstacles.
+- The **south-east part** (464 m²) has no panels in reality, probably kept free for a future extension (ASSUMPTION, not confirmed). For the validation it is left out with `--reserved examples\cep9_reserved.geojson`. Without it the red roof gets 92 panels and both roofs 155.
+
+To run it:
 
 ```
 python -m step02_pv_capacity.read_roof "Camí Antic de València 35, Barcelona" --laz-dir data\lidar --out data\roof\cep9_red

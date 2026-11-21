@@ -23,7 +23,7 @@ def _roof_with_panels():
 
 def test_panel_block_is_found_and_roof_is_not():
     rgb, lroof = _roof_with_panels()
-    fine, coarse, blobs = ep.detect(rgb, lroof, 5)
+    fine, coarse, blobs, other = ep.detect(rgb, lroof, 5)
     assert len(blobs) == 1
     assert 30 <= blobs[0]["area_m2"] <= 45            # 40 m2 block, edges trimmed by the cleaning
     assert not fine[150:, :].any()                    # plain gravel stays clear
@@ -34,3 +34,10 @@ def test_summary_estimates_panels():
     s = ep.summary([{"area_m2": 103.2}], 2.28 * 1.13)
     assert s["existing_panels_m2"] == 103.2
     assert s["existing_panels_estimate"] == round(103.2 * ep.PANEL_COVER / (2.28 * 1.13))
+
+
+def test_listed_look_alike_is_not_a_panel():
+    rgb, lroof = _roof_with_panels()
+    fine, coarse, blobs, other = ep.detect(rgb, lroof, 5, not_panels=[(10.0, 13.5, 3.0, "solar water heater")])
+    assert blobs == [] and not fine.any()
+    assert other.sum() * 0.25 > 25                    # kept as an obstacle instead

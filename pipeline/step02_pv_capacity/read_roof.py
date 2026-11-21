@@ -113,17 +113,39 @@ def height_image(height, roof, path):
     Image.fromarray(out.astype(np.uint8)).save(path)
 
 
-def usable_with_panels(lroof, panels, roof_state):
-    """Usable cells when the existing panels are ignored ("empty") or kept ("existing")."""
-    lower = lroof.lower if lroof.lower is not None and not lroof.summary.get("lower_roofs_included") \
-        else np.zeros_like(lroof.roof)
-    free = (lroof.surface_id >= 0) & ~lower
+def usable_with_panels(lroof, panels, roof_state, keep_out=None, reserved=None):
+    """Usable cells when the existing panels are ignored ("empty") or kept ("existing").
+
+    keep_out: look-alikes (e.g. solar water heaters) that stay on the roof either way;
+    reserved: cells kept free on purpose (e.g. for a future extension), never usable.
+    """
+    zero = np.zeros_like(lroof.roof)
+    lower = lroof.lower if lroof.lower is not None and not lroof.summary.get("lower_roofs_included") else zero
+    keep_out = zero if keep_out is None else keep_out
+    free = (lroof.surface_id >= 0) & ~lower & ~keep_out
     if roof_state == "empty":
-        return usable_mask(lroof.roof, (free | panels) & ~lower, lroof.obstacle & ~panels, lroof.grid.res)
-    return usable_mask(lroof.roof, free & ~panels, lroof.obstacle | panels, lroof.grid.res)
+        usable = usable_mask(lroof.roof, (free | panels) & ~lower & ~keep_out,
+                             (lroof.obstacle & ~panels) | keep_out, lroof.grid.res)
+    else:
+        usable = usable_mask(lroof.roof, free & ~panels, lroof.obstacle | panels | keep_out, lroof.grid.res)
+    return usable if reserved is None else usable & ~reserved
 
 
-def read_roof(laz_dir, address=None, lat=None, lon=None, out="roof", roof_state="empty", panel_wp=540):
+def load_reserved(path, refcat, grid):
+    """Cells inside the polygons of a reserved-areas GeoJSON (EPSG:25831) for this plot.
+    A feature with a 'refcat' property only applies to that plot."""
+    from shapely.geometry import shape
+    fc = json.loads(Path(path).read_text(encoding="utf-8"))
+    feats = [f for f in fc["features"]
+             if ((f.get("properties") or {}).get("refcat") or refcat or "")[:14] == (refcat or "")[:14]]
+    out = np.zeros((grid.height, grid.width), bool)
+    for f in feats:
+        out |= grid.mask(shape(f["geometry"]))
+    return out, [(f.get("properties") or {}).get("reason", "") for f in feats]
+
+
+def read_roof(laz_dir, address=None, lat=None, lon=None, out="roof", roof_state="empty", panel_wp=540,
+              reserved_path=None):
     record, fp = find_building(address, lat, lon)
     lroof = read_roof_from_tiles(fp, laz_dir, refcat=record.refcat)
     if lroof is None:
@@ -141,11 +163,18 @@ def read_roof(laz_dir, address=None, lat=None, lon=None, out="roof", roof_state=
 
     panels_fine = None
     if rgb is not None:
-        panels_fine, panels, blobs = existing_panels.detect(rgb, lroof, FACTOR)
+        not_panels = existing_panels.load_not_panels(record.refcat)
+        panels_fine, panels, blobs, look_alikes = existing_panels.detect(rgb, lroof, FACTOR, not_panels)
         module = get_module(panel_wp)
         summary.update(existing_panels.summary(blobs, module.long_m * module.short_m))
-        empty = usable_with_panels(lroof, panels, "empty")
-        new_only = usable_with_panels(lroof, panels, "existing")
+        summary["not_panels"] = sorted({w for *_, w in not_panels}) if look_alikes.any() else []
+        reserved = None
+        if reserved_path:
+            reserved, reasons = load_reserved(reserved_path, record.refcat, grid)
+            summary["reserved_m2"] = round(float((reserved & lroof.roof).sum() * grid.cell_area), 1)
+            summary["reserved_reason"] = "; ".join(sorted(set(r for r in reasons if r)))
+        empty = usable_with_panels(lroof, panels, "empty", look_alikes, reserved)
+        new_only = usable_with_panels(lroof, panels, "existing", look_alikes, reserved)
         summary["usable_empty_roof_m2"] = round(float(empty.sum() * grid.cell_area), 1)
         summary["usable_new_only_m2"] = round(float(new_only.sum() * grid.cell_area), 1)
         usable = empty if roof_state == "empty" else new_only
@@ -194,10 +223,13 @@ def main():
     ap.add_argument("--roof-state", choices=["empty", "existing"], default="empty",
                     help="empty (default): ignore panels already on the roof; existing: keep them, usable = room for new ones")
     ap.add_argument("--panel-wp", type=int, default=540, help="panel size used to estimate the existing panel count")
+    ap.add_argument("--reserved", help="GeoJSON (EPSG:25831) of roof areas kept free on purpose, e.g. for a future extension; "
+                    "never usable. Optional 'refcat' and 'reason' properties per feature")
     args = ap.parse_args()
     if not args.address and (args.lat is None or args.lon is None):
         ap.error("give an address, or both --lat and --lon")
-    result = read_roof(args.laz_dir, args.address, args.lat, args.lon, args.out, args.roof_state, args.panel_wp)
+    result = read_roof(args.laz_dir, args.address, args.lat, args.lon, args.out, args.roof_state, args.panel_wp,
+                       args.reserved)
     roof = {k: v for k, v in result["roof"].items() if k != "existing_panel_blocks"}
     print(json.dumps({"building": result["building"], "roof": roof, "photo_error": result["photo_error"]}, indent=2, default=str))
 

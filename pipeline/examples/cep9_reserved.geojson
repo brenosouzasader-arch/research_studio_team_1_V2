@@ -1,0 +1,46 @@
+{
+ "type": "FeatureCollection",
+ "crs": {
+  "type": "name",
+  "properties": {
+   "name": "urn:ogc:def:crs:EPSG::25831"
+  }
+ },
+ "features": [
+  {
+   "type": "Feature",
+   "properties": {
+    "refcat": "3241427DF3834A",
+    "name": "Escola Pere IV, south-east part",
+    "reason": "ASSUMPTION: kept free for a future extension (Breno, 21 Nov 2026, not confirmed); no panels there in reality"
+   },
+   "geometry": {
+    "type": "Polygon",
+    "coordinates": [
+     [
+      [
+       433175.3400506786,
+       4584001.18384662
+      ],
+      [
+       433194.34,
+       4583986.51
+      ],
+      [
+       433183.16,
+       4583972.01
+      ],
+      [
+       433162.03171680565,
+       4583988.332137987
+      ],
+      [
+       433175.3400506786,
+       4584001.18384662
+      ]
+     ]
+    ]
+   }
+  }
+ ]
+}
