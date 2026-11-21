@@ -1,0 +1,188 @@
+{
+  "case": "a160",
+  "role": "secondary office case",
+  "name": "Almogàvers 160 office (A160), Poblenou",
+  "site_file": "poblenou_almogavers_160",
+  "checked": "2026-11-21, live ICGC geocoder + Catastro Consulta_RCCOOR + INSPIRE Buildings WFS",
+  "host": {
+    "name": "Oficines Almogàvers 160",
+    "kind": "office",
+    "note": "The real roof already has PV of unknown size (visible on the 2025 orthophoto). The pipeline ASSUMES the roof is empty.",
+    "roofs": [
+      {
+        "roof": "main",
+        "addresses": [
+          "Carrer dels Almogàvers 160, Barcelona"
+        ],
+        "catastro_address": "CL ALMOGAVERS 154 BARCELONA (BARCELONA)",
+        "refcat": "2635601DF3823F",
+        "lat": 41.39920581,
+        "lon": 2.19309956,
+        "current_use": "4_1_office",
+        "year_built": 2022,
+        "floors_above_ground": 7,
+        "footprint_m2": 1718.3,
+        "lidar_sheets": [
+          "432583"
+        ],
+        "step01_output": "examples/a160_building.json"
+      }
+    ],
+    "compare_with": {
+      "note": "Sindhuja's LiDAR layout (low confidence): base 110.88 kWp, 155,133 kWh/yr",
+      "source": "https://github.com/SindhujaDavuluri-IAAC/rooftops_repowered_v2/blob/main/reports/pvgis/A160/hypothetical_acquisition.json"
+    }
+  },
+  "participants": [
+    {
+      "id": "a160_office",
+      "name": "A160 office tenants (host, uses its own power)",
+      "role": "host self-use",
+      "address": "Carrer dels Almogàvers 160, Barcelona",
+      "refcat": "2635601DF3823F",
+      "distance_m": 0,
+      "source": "site file"
+    },
+    {
+      "id": "nh_diagonal_poblenou",
+      "name": "NH Barcelona Diagonal Poblenou (hotel, 129 rooms)",
+      "role": "candidate guest",
+      "address": "Carrer d'Àlaba 94-96, Barcelona",
+      "catastro_address": "CL ALABA 94 N2-96 BARCELONA (BARCELONA)",
+      "refcat": "2634315DF3823D",
+      "lat": 41.397941,
+      "lon": 2.192136,
+      "current_use": "4_2_retail",
+      "year_built": 1960,
+      "floors_above_ground": 8,
+      "footprint_m2": 1085.0,
+      "distance_m": 105,
+      "source": "Sindhuja's case_study_candidates.csv"
+    },
+    {
+      "id": "ciutat_granada_95",
+      "name": "Municipal social-rent housing (18 homes)",
+      "role": "candidate guest",
+      "address": "Carrer de la Ciutat de Granada 95-97, Barcelona",
+      "catastro_address": "CL CIUTAT DE GRANADA 95 BARCELONA (BARCELONA)",
+      "refcat": "2737213DF3823H",
+      "lat": 41.400862,
+      "lon": 2.194611,
+      "current_use": "1_residential",
+      "year_built": 2023,
+      "floors_above_ground": 8,
+      "footprint_m2": 489.3,
+      "dwellings_catastro": 1,
+      "dwellings_source_says": 18,
+      "distance_m": 199,
+      "source": "Sindhuja's case_study_candidates.csv"
+    },
+    {
+      "id": "itaeb",
+      "name": "Institut ITAEB (school)",
+      "role": "candidate guest",
+      "address": "Carrer dels Almogàvers 131, Barcelona",
+      "catastro_address": "CL ALMOGAVERS 131 BARCELONA (BARCELONA)",
+      "refcat": "2434317DF3823C",
+      "lat": 41.39783,
+      "lon": 2.19086,
+      "current_use": null,
+      "footprint_m2": 869.2,
+      "distance_m": 235,
+      "catastro_note": "Catastro has the plot (1,076 m²) but no building on it. Footprint traced from LiDAR and checked on the orthophoto: a low (about 7 m, 2-storey) white-roofed building.",
+      "source": "Sindhuja's case_study_candidates.csv",
+      "coords_source": "Breno, 21 Nov 2026 (41.39783 N, 2.19086 E)",
+      "footprint_source": "lidar (Catastro has no building on this plot); step01 run: data/host/itaeb.json",
+      "building_height_m": 7.4,
+      "flat_roof": true,
+      "flat_share": 0.751,
+      "lidar_sheets": [
+        "432583"
+      ]
+    }
+  ],
+  "available_data": [
+    {
+      "item": "Catastro plot + building data and LiDAR roof check",
+      "file": "examples/a160_building.json",
+      "status": "have"
+    },
+    {
+      "item": "ICGC LiDAR sheet 432583 (2021-2023)",
+      "file": "data/lidar/lidar-territorial-v3r1-full1km432583-2021-2023.laz",
+      "status": "have"
+    },
+    {
+      "item": "Roof layout + hourly yield (steps 02-03)",
+      "file": "a160_yield.json",
+      "status": "have"
+    },
+    {
+      "item": "Sindhuja's layout and yield to compare with",
+      "file": null,
+      "status": "have (in the site file, from her repo)"
+    },
+    {
+      "item": "Hourly prices OMIE + PVPC 2023-2025",
+      "file": "data/prices/pvpc_hourly.csv",
+      "status": "have"
+    },
+    {
+      "item": "Demand shape model trained on GoiEner meters",
+      "file": "data/models/demand_profile/report.json",
+      "status": "have"
+    },
+    {
+      "item": "Metered hourly demand of the office or any guest",
+      "file": null,
+      "status": "missing"
+    },
+    {
+      "item": "Yearly-use estimates for the guests",
+      "file": null,
+      "status": "missing"
+    }
+  ],
+  "unknowns": [
+    {
+      "item": "Size of the PV already on the roof",
+      "why": "We treat the roof as empty, so our kWp is a 'what if' figure, not what the owner could add.",
+      "next": "Ask the building manager, or count the panels on the orthophoto."
+    },
+    {
+      "item": "Roof flatness",
+      "why": "Only 33% of LiDAR cells read as flat. That passes the relaxed 30% limit, but the stored step 01 run (made before the change) still says not flat.",
+      "next": "Rerun find_building for A160 so the stored record matches the 30% rule."
+    },
+    {
+      "item": "Office tenants and their demand",
+      "why": "No meter data; demand comes from the office profile.",
+      "next": "Ask the owner for Datadis hourly data."
+    },
+    {
+      "item": "All guests are beyond 100 m",
+      "why": "The guests are 105-243 m away, so none qualify under the 100 m direct-wire default. Only the legal-mode radius includes them.",
+      "next": "Search Catastro plots within 100 m (parcels.py) for closer guests, or run in --legal-mode."
+    },
+    {
+      "item": "Homes at Ciutat de Granada 95-97",
+      "why": "Catastro lists 1 dwelling on a 2023 residential building; the source says 18 homes. 97 may be a separate plot.",
+      "next": "Look up Ciutat de Granada 97 and use 18 homes until confirmed."
+    },
+    {
+      "item": "NH hotel use code",
+      "why": "Catastro lists it as 4_2_retail, not a hotel, which would give it the wrong demand shape.",
+      "next": "Set the use to hotel by hand in the guest list."
+    },
+    {
+      "item": "Heritage protection",
+      "why": "heritage_protected is null.",
+      "next": "Download the Open Data BCN heritage catalogue (see known_gaps.json)."
+    },
+    {
+      "item": "Year built, use and floors of buildings traced from LiDAR",
+      "why": "Catastro has no building record for itaeb, so only the outline, height and roof shape are known.",
+      "next": "Fill use from the member list; ask the Ajuntament for year and floor area."
+    }
+  ]
+}

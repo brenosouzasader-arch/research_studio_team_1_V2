@@ -8,7 +8,7 @@ import json
 
 import laspy
 import numpy as np
-from shapely.geometry import box
+from shapely.geometry import Point, box
 
 from step01_select_host import catastro, find_building, heritage, lidar
 
@@ -203,3 +203,41 @@ def test_unclassified_points_ignored_when_sheet_has_buildings(tmp_path):
     fp = box(X0, Y0, X0 + 20, Y0 + 15)
     pts = lidar.roof_points(fp, lidar.find_tiles(fp, tmp_path))
     assert len(pts) == int((cls == lidar.BUILDING_CLASS).sum())
+
+
+def _plot_with_building(tmp_path):
+    """A 60 x 50 m plot: ground at 4 m everywhere, a 20 x 15 m block 12 m above it, a 2 m wall."""
+    xs, ys = np.meshgrid(np.arange(X0 - 20, X0 + 40, 0.5), np.arange(Y0 - 20, Y0 + 30, 0.5))
+    x, y = xs.ravel(), ys.ravel()
+    in_block = (x >= X0) & (x < X0 + 20) & (y >= Y0) & (y < Y0 + 15)
+    wall = (x >= X0 - 15) & (x < X0 - 14) & ~in_block
+    z = np.where(in_block, 16.0, np.where(wall, 6.0, 4.0))
+    _write_las(tmp_path / "ground.laz", x[~in_block & ~wall], y[~in_block & ~wall], z[~in_block & ~wall], 2)
+    _write_las(tmp_path / "blocks.laz", x[in_block | wall], y[in_block | wall], z[in_block | wall], lidar.BUILDING_CLASS)
+    return box(X0 - 20, Y0 - 20, X0 + 40, Y0 + 30)
+
+
+def test_footprint_from_lidar_finds_the_block(tmp_path):
+    plot = _plot_with_building(tmp_path)
+    tiles = lidar.find_tiles(plot, tmp_path)
+    fp, ground = lidar.footprint_from_lidar(plot, Point(X0 + 5, Y0 + 5), tiles)
+    assert ground == 4.0
+    assert abs(fp.area - 300) < 30  # 20 x 15 m; the low wall is left out
+    assert fp.contains(Point(X0 + 10, Y0 + 7))
+
+
+def test_find_building_falls_back_to_lidar(tmp_path, monkeypatch):
+    plot = _plot_with_building(tmp_path)
+
+    def no_building(ref):
+        raise catastro.CatastroError("No building with a footprint found")
+
+    monkeypatch.setattr(catastro, "refcat_from_point", lambda lat, lon: catastro.parse_rccoor(RCCOOR_SAMPLE))
+    monkeypatch.setattr(catastro, "buildings_for_refcat", no_building)
+    monkeypatch.setattr(find_building.parcels, "download_parcels",
+                        lambda cx, cy, half: [{"refcat": "0123456DF3802C", "geometry": plot}])
+    monkeypatch.setattr(find_building, "to_utm", lambda lon, lat: (X0 + 5, Y0 + 5))
+    record, fp = find_building.find_building(lat=41.39, lon=2.17, laz_dir=tmp_path)
+    assert record.footprint_source == "lidar"
+    assert abs(record.footprint_area_m2 - 300) < 30
+    assert record.year_built is None and any("LiDAR" in w for w in record.warnings)

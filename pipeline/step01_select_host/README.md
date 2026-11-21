@@ -12,9 +12,16 @@ The first step of the rooftop solar pipeline. The input is an address, or a poin
 | `lat`, `lon` | ICGC geocoder, falling back to Nominatim (OpenStreetMap) |
 | `refcat`: 14-character plot reference | Catastro, "Consulta_RCCOOR" service |
 | `year_built`, `current_use`, `dwellings`, footprint | Catastro INSPIRE Buildings |
+| `footprint_source` | `catastro`, or `lidar` when Catastro has no building on the plot (see below) |
 | `floors_above_ground`: highest building part | Catastro INSPIRE Building Parts |
 | `lidar_tiles`, `roof`, `flat_roof` | Your downloaded ICGC or CNIG LiDAR tiles |
 | `heritage_protected` | A protected-buildings GeoJSON, if you have one (otherwise `null` = unknown) |
+
+### Where the footprint comes from: Catastro first, LiDAR if Catastro has nothing
+
+1. **Catastro first.** The footprint is the building that Catastro's INSPIRE Buildings service lists on the plot.
+2. **LiDAR when Catastro has no building.** Some plots have a cadastral reference but no building in that service. On 21 Nov 2026 this was true of three public buildings: Institut Maria Espinalt, the Llevant fire station and Institut ITAEB. For those, `find_building` takes the plot outline (`parcels.py`) and traces the building from LiDAR (`lidar.footprint_from_lidar`): building points more than 6 m above the plot's ground (ASSUMPTION; this drops walls, canopies and low sheds), on a 1 m grid with small gaps closed. Year, use and homes then stay `null`. If the LiDAR sheets cover less than all of the plot, it warns that the outline may be cut off.
+3. **Checked again in step 02.** Step 02 reads **every** building, host and participants, from both LiDAR and the ICGC orthophoto. Comparing those two with the step 01 footprint confirms that the Catastro footprint is right, or shows where it is not.
 
 All geometry is in **EPSG:25831** (ETRS89 / UTM 31N, metres), the same system as the ICGC data. Each run writes `building.json` and `building.geojson`. Drag the `.geojson` file into QGIS to check the footprint against the orthophoto.
 
@@ -46,6 +53,21 @@ python -m pytest tests
 ### Getting LiDAR tiles
 
 Download the tiles that cover your test buildings from the **ICGC Territorial LiDAR** download viewer (3rd coverage, 2021–2023, LAZ), or from the CNIG PNOA LiDAR viewer. Put them all in one folder, such as `data/lidar/`. The code reads each file's bounds, so the file names don't matter.
+
+## Test cases: CEP9 (primary) and A160 (secondary)
+
+`cases/cep9.json` and `cases/a160.json` list, for each case: the host roof(s), every participant (address, Catastro address, cadastral reference, use, distance from the host), the data we have, and what is still unknown, with the next action for each. References and points were checked live on 21 Nov 2026 (ICGC geocoder + Catastro).
+
+```bash
+python -m step01_select_host.cases          # both cases
+python -m step01_select_host.cases cep9     # one case
+python -m step01_select_host.cases --map    # rebuild the map footprints
+python -m step01_select_host.cases --site   # copy the cases into the website data
+```
+
+Main findings: CEP9's power comes from two roofs, Escola Pere IV (red, 3241427DF3834A) and Institut Quatre Cantons (yellow, 3241428DF3834A). The Institut's own address geocodes onto the red plot, so run the yellow roof from its point. Maria Espinalt, the Llevant fire station and ITAEB have a plot but no building in Catastro, so their footprints are traced from LiDAR at points Breno checked on the map. The fire station's plot runs onto LiDAR sheet 432584, which we don't have yet, so its outline is cut off. Only Can Felipa is within the 100 m default, and all A160 guests are 105-243 m away.
+
+For the website's step 01 map: `--map` rebuilds `cases/<case>_map.geojson` (needs internet, plus the LiDAR traces in `data/host/`), and `--site` copies the cases into `website/data/site_data.json` without rerunning the other steps.
 
 ## How the flat-roof check works
 

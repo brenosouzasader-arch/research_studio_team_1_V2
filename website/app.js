@@ -167,7 +167,7 @@
       field(f, "Current use", USE[r.current_use] || r.current_use, "Catastro");
       field(f, "Dwellings", r.dwellings, "Catastro");
       field(f, "Height", r.building_height_m != null ? fmt(r.building_height_m, 1) + " m" : null, r.height_source ? "from " + r.height_source.replace("lidar", "LiDAR") : "");
-      field(f, "Footprint", r.footprint_area_m2 != null ? fmt(r.footprint_area_m2, 0) + " m²" : null, "Catastro");
+      field(f, "Footprint", r.footprint_area_m2 != null ? fmt(r.footprint_area_m2, 0) + " m²" : null, r.footprint_source === "lidar" ? "traced from LiDAR (no building in Catastro)" : "Catastro");
       field(f, "LiDAR sheets", (r.lidar_tiles || []).map((t) => (t.match(/1km(\d+)/) || [, t])[1]).join(", "), "ICGC Territorial LiDAR");
       field(f, "Flat roof", r.flat_roof == null ? null : (r.flat_roof ? "yes" : "no") + (rf.flat_share != null ? `: ${pct(rf.flat_share)} of cells under 5°, median slope ${fmt(rf.median_slope_deg, 1)}°` : ""), "modelled from LiDAR");
       field(f, "Roof height range", rf.roof_height_min != null ? `${fmt(rf.roof_height_min, 1)} to ${fmt(rf.roof_height_max, 1)} m` : null, "LiDAR");
@@ -210,6 +210,75 @@
     }
     const first = known.find((r) => r.analysed) || known[0];
     if (first) { $("addr").value = first.query; show(first); }
+  }
+
+  // Step 01: where the host and participant buildings are, on a street map
+  function siteMap(D) {
+    const cases = (D.step01 && D.step01.cases) || [];
+    if (!cases.length || !window.L) return;
+    $("s1-map-card").hidden = false;
+    const css = (v) => getComputedStyle(document.documentElement).getPropertyValue(v).trim();
+    const dark = matchMedia("(prefers-color-scheme: dark)").matches && document.documentElement.dataset.theme !== "light"
+      || document.documentElement.dataset.theme === "dark";
+    const map = L.map("s1-map", { scrollWheelZoom: false });
+    L.tileLayer("https://geoserveis.icgc.cat/servei/catalunya/mapa-base/wmts/topografic-gris/MON3857NW/{z}/{x}/{y}.png", {
+      maxZoom: 20, maxNativeZoom: 19,
+      attribution: 'Base map &copy; <a href="https://www.icgc.cat/">Institut Cartogràfic i Geològic de Catalunya</a> (CC BY 4.0)',
+    }).addTo(map);
+    if (dark) $("s1-map").classList.add("dark-tiles");
+    const layer = L.layerGroup().addTo(map);
+    const short = (n) => n.replace(/\s*\(.*\)\s*/, "").replace(/^Oficines /, "");
+    const pick = $("s1-casepick");
+    const buttons = cases.map((c) => {
+      const b = el("button", { type: "button", text: c.case.toUpperCase() + " · " + c.role.replace(/ (end-to-end )?(test )?case$/, "") }, pick);
+      b.addEventListener("click", () => draw(c));
+      return b;
+    });
+
+    function draw(c) {
+      buttons.forEach((b, i) => b.setAttribute("aria-pressed", String(cases[i] === c)));
+      layer.clearLayers();
+      const host = css("--s1"), guest = css("--s2");
+      const ring = L.circle([c.host.lat, c.host.lon], { radius: 100, color: css("--ink-3"), weight: 1.5, dashArray: "4 4", fill: false, interactive: false }).addTo(layer);
+      for (const f of c.map.features) {
+        const p = f.properties, col = p.role === "host" ? host : guest;
+        const traced = p.footprint_source === "lidar";
+        const tip = `${p.name}<br>${p.refcat || "no cadastral ref"} · footprint: ${p.footprint_source === "lidar" ? "LiDAR trace" : p.footprint_source}`;
+        const shape = f.geometry.type === "Point"
+          ? L.circleMarker([p.lat, p.lon], { radius: 7, color: col, weight: 2, fillOpacity: 0.5 })
+          : L.geoJSON(f, { style: { color: col, weight: 2, fillColor: col, fillOpacity: 0.35, dashArray: traced ? "5 4" : null } });
+        shape.bindPopup(tip).addTo(layer);
+        const at = f.geometry.type === "Point" ? [p.lat, p.lon] : shape.getBounds().getCenter();  // label on the building, not the input point
+        L.marker(at, { opacity: 0, interactive: false, keyboard: false })
+          .bindTooltip(short(p.name), { permanent: true, direction: "top", className: "map-label", offset: [0, -4] }).addTo(layer);
+      }
+      const bounds = L.featureGroup(layer.getLayers().filter((l) => l !== ring)).getBounds()
+        .extend(L.latLng(c.host.lat, c.host.lon).toBounds(220));  // the 100 m ring, plus a margin
+      map.fitBounds(bounds, { padding: [24, 24] });
+
+      const lg = $("s1-map-legend");
+      lg.replaceChildren();
+      for (const [cls, k, t] of [["", host, "host roof"], ["", guest, "participant (Catastro footprint)"], ["dash", guest, "participant (footprint traced from LiDAR)"], ["ring", "", "100 m: the tool's default wiring reach"]]) {
+        const s = el("span", {}, lg);
+        const i = el("i", { class: cls }, s);
+        i.style.setProperty("--k", k); if (k) i.style.background = k;
+        s.appendChild(document.createTextNode(t));
+      }
+      $("s1-map-note").textContent = c.name + ". Click a building for its cadastral reference." +
+        (c.unlocated.length ? ` Not on the map (no address yet): ${c.unlocated.join(", ")}.` : "");
+
+      const t = $("s1-case-table");
+      t.replaceChildren();
+      const hr = el("tr", {}, el("thead", {}, t));
+      for (const h of ["Participant", "Role", "Address", "Cadastral ref", "Distance", "Footprint"]) el("th", { text: h }, hr);
+      const tb = el("tbody", {}, t);
+      for (const p of c.participants) {
+        const r = el("tr", {}, tb);
+        for (const v of [p.name, p.role, p.address || "unknown", p.refcat || "unknown",
+          p.distance_m != null ? fmt(p.distance_m, 0) + " m" : "–", p.footprint_m2 != null ? fmt(p.footprint_m2, 0) + " m²" : "–"]) el("td", { text: v }, r);
+      }
+    }
+    draw(cases[0].case === "cep9" ? cases[0] : cases.find((c) => c.case === "cep9") || cases[0]);
   }
 
   function match(D) {
@@ -782,7 +851,7 @@
   }
 
   function start(D) {
-    for (const fn of [overview, property, roof, surplus, neighbours, match, prices, battery, money, agreed, sources]) {
+    for (const fn of [overview, property, siteMap, roof, surplus, neighbours, match, prices, battery, money, agreed, sources]) {
       try { fn(D); } catch (err) { console.error(fn.name, err); }
     }
     trackSteps();

@@ -108,3 +108,51 @@ def roof_flatness(points, grid=GRID_SIZE):
         "points": int(len(points)),
         "note": None,
     }
+
+
+# ---------- fallback footprint when Catastro has no building ----------
+
+GROUND_CLASS = 2
+TRACE_MIN_HEIGHT_M = 6.0  # ASSUMPTION: points this far above ground count as the main building (drops walls, canopies, low sheds)
+TRACE_CELL_M = 1.0
+TRACE_MIN_AREA_M2 = 30.0
+
+
+def footprint_from_lidar(plot, point, tiles, min_height=TRACE_MIN_HEIGHT_M):
+    """Trace a building outline from LiDAR inside a cadastral plot.
+
+    Used only when Catastro has the plot but no building on it. Takes the
+    building/unclassified points more than `min_height` above the plot's ground,
+    grids them at 1 m, closes small gaps, and keeps the part that contains (or is
+    nearest to) `point`. Returns (footprint, ground_z) or (None, None).
+    """
+    minx, miny, maxx, maxy = plot.bounds
+    xs, ys, zs, cs = [], [], [], []
+    for path in tiles:
+        las = laspy.read(path)
+        x, y = np.asarray(las.x), np.asarray(las.y)
+        k = np.flatnonzero((x >= minx) & (x <= maxx) & (y >= miny) & (y <= maxy))
+        k = k[shapely.contains_xy(plot, x[k], y[k])]
+        cls = np.asarray(las.classification)[k]
+        building = class_mask(las, (BUILDING_CLASS,), path)[k]
+        xs.append(x[k]); ys.append(y[k]); zs.append(np.asarray(las.z)[k])
+        cs.append(np.where(building, BUILDING_CLASS, cls))
+    if not xs:
+        return None, None
+    x, y, z, c = (np.concatenate(a) for a in (xs, ys, zs, cs))
+    if len(z) < MIN_POINTS:
+        return None, None
+    ground = z[c == GROUND_CLASS]
+    ground_z = float(np.median(ground)) if ground.size else float(np.percentile(z, 5))
+    high = (c == BUILDING_CLASS) & (z > ground_z + min_height)
+    cells = set(zip(np.floor(x[high] / TRACE_CELL_M).astype(int), np.floor(y[high] / TRACE_CELL_M).astype(int)))
+    if not cells:
+        return None, ground_z
+    s = TRACE_CELL_M
+    shape = shapely.union_all([box(i * s, j * s, (i + 1) * s, (j + 1) * s) for i, j in cells])
+    shape = shape.buffer(1).buffer(-1.5).buffer(0.5).intersection(plot)  # close gaps, drop thin strips
+    parts = [g for g in getattr(shape, "geoms", [shape]) if g.area >= TRACE_MIN_AREA_M2]
+    if not parts:
+        return None, ground_z
+    best = min(parts, key=lambda g: g.distance(point))
+    return best.simplify(0.5), ground_z

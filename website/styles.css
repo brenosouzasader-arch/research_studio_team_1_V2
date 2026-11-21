@@ -274,3 +274,13 @@ tr.pick td { background: var(--accent-soft); font-weight: 600; }
 .frow b { text-align: right; }
 #compare-img { width: 100%; max-height: 520px; object-fit: contain; background: var(--paper-2); border-radius: var(--radius); }
 @media (max-width: 860px) { .frow { grid-template-columns: 1fr 44px; } .frow .flabel { grid-column: 1 / -1; } }
+
+/* Step 01 positioning map */
+#s1-map { height: 420px; border: 1px solid var(--rule); border-radius: var(--radius); background: var(--paper-2); z-index: 0; }
+@media (max-width: 640px) { #s1-map { height: 320px; } }
+.legend i.dash { background: transparent !important; border: 2px dashed var(--k); height: 10px; }
+.legend i.ring { background: transparent !important; border: 1.5px dashed var(--ink-3); border-radius: 50%; width: 12px; height: 12px; }
+.leaflet-tooltip.map-label { background: var(--panel); color: var(--ink); border: 1px solid var(--rule-2); box-shadow: none; font: 600 0.72rem var(--body); padding: 2px 6px; }
+.leaflet-tooltip.map-label::before { display: none; }
+.leaflet-container { font-family: var(--body); }
+#s1-map.dark-tiles .leaflet-tile-pane { filter: invert(0.9) hue-rotate(180deg) brightness(0.9); }

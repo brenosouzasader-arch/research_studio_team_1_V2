@@ -25,6 +25,7 @@ from pathlib import Path
 
 import numpy as np
 
+from step01_select_host.cases import site_cases
 from step04_read_host_demand.host_table import read_host_table
 from step06_prices_and_battery import battery_types as bt
 from step06_prices_and_battery import dispatch
@@ -330,7 +331,8 @@ def main():
     step01 = {"properties": [{**{k: v for k, v in r.items() if k != "_about"}, "analysed": r.get("refcat") == main_rec["refcat"],
                               "about": r.get("_about", "")} for r in props],
               "gaps": json.loads(gaps_path.read_text(encoding="utf-8")) if gaps_path.exists() else [],
-              "run_command": 'python -m step01_select_host.find_building "<address>, Barcelona" --laz-dir data\\lidar'}
+              "run_command": 'python -m step01_select_host.find_building "<address>, Barcelona" --laz-dir data\\lidar',
+              "cases": site_cases()}
     data = {
         "step01": step01, "match": match, "warnings": warnings,
         "compare": {"file": args.compare_image, "caption": args.compare_caption} if args.compare_image else None,

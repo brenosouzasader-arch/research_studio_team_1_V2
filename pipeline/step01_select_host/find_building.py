@@ -12,10 +12,11 @@ import json
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
 
+import shapely
 from pyproj import Transformer
 from shapely.geometry import Point, mapping
 
-from . import catastro, geocode, height, heritage, lidar
+from . import catastro, geocode, height, heritage, lidar, parcels
 
 to_utm = Transformer.from_crs("EPSG:4326", "EPSG:25831", always_xy=True).transform
 
@@ -36,6 +37,7 @@ class BuildingRecord:
     height_source: str | None        # "lidar" or "estimate (3 m per Catastro floor)"
     footprint_area_m2: float
     footprint_wkt: str               # EPSG:25831
+    footprint_source: str = "catastro"  # "catastro", or "lidar" when Catastro has no building on the plot
     lidar_tiles: list = field(default_factory=list)
     roof: dict | None = None         # output of lidar.roof_flatness
     flat_roof: bool | None = None    # None = not checked (no LiDAR given)
@@ -60,6 +62,26 @@ def max_floors(parts, footprint):
     return max(floors) if floors else None
 
 
+def lidar_building(refcat, point_utm, laz_dir):
+    """Fallback building record from the cadastral plot outline + LiDAR."""
+    if not laz_dir:
+        raise catastro.CatastroError(
+            f"Catastro has no building on plot {refcat}; pass --laz-dir to trace it from LiDAR")
+    plots = [p for p in parcels.download_parcels(point_utm.x, point_utm.y, half=150)
+             if p["refcat"] == refcat or p["geometry"].contains(point_utm)]
+    if not plots:
+        raise catastro.CatastroError(f"Catastro plot {refcat} outline not found")
+    plots.sort(key=lambda p: p["refcat"] != refcat)  # exact plot first
+    plot_geom = plots[0]["geometry"]
+    tiles = lidar.find_tiles(plot_geom, laz_dir)
+    fp, _ = lidar.footprint_from_lidar(plot_geom, point_utm, tiles)
+    if fp is None:
+        raise catastro.CatastroError(f"No building found in LiDAR on plot {refcat}")
+    covered = shapely.union_all([lidar.tile_bounds(t) for t in tiles]).intersection(plot_geom).area / plot_geom.area
+    return {"id": None, "year_built": None, "current_use": None, "dwellings": None, "footprint": fp,
+            "lidar_plot_coverage": round(covered, 2)}
+
+
 def find_building(address=None, lat=None, lon=None, laz_dir=None, heritage_path=None):
     warnings = []
     if lat is None or lon is None:
@@ -69,12 +91,23 @@ def find_building(address=None, lat=None, lon=None, laz_dir=None, heritage_path=
         geocoder = None
 
     plot = catastro.refcat_from_point(lat, lon)
-    buildings, parts = catastro.buildings_for_refcat(plot["refcat"])
     point_utm = Point(to_utm(lon, lat))
-    b = pick_building(buildings, point_utm)
+    try:
+        buildings, parts = catastro.buildings_for_refcat(plot["refcat"])
+        b = pick_building(buildings, point_utm)
+        footprint_source = "catastro"
+        if len(buildings) > 1:
+            warnings.append(f"{len(buildings)} buildings on this plot; picked {b['id']}")
+    except catastro.CatastroError:
+        # Catastro has the plot but no building on it: trace the outline from LiDAR
+        b, parts = lidar_building(plot["refcat"], point_utm, laz_dir), []
+        footprint_source = "lidar"
+        warnings.append("Catastro has no building on this plot: footprint traced from LiDAR "
+                        f"(points over {lidar.TRACE_MIN_HEIGHT_M:g} m above ground); year, use and homes unknown")
+        if b["lidar_plot_coverage"] < 0.99:
+            warnings.append(f"LiDAR sheets cover only {b['lidar_plot_coverage']:.0%} of the plot: "
+                            "the traced footprint may be cut off; download the neighbouring sheet")
     fp = b["footprint"]
-    if len(buildings) > 1:
-        warnings.append(f"{len(buildings)} buildings on this plot; picked {b['id']}")
 
     record = BuildingRecord(
         query=address or f"{lat},{lon}",
@@ -84,6 +117,7 @@ def find_building(address=None, lat=None, lon=None, laz_dir=None, heritage_path=
         dwellings=b["dwellings"],
         building_height_m=None, height_source=None,
         footprint_area_m2=round(fp.area, 1), footprint_wkt=fp.wkt,
+        footprint_source=footprint_source,
         warnings=warnings,
     )
 

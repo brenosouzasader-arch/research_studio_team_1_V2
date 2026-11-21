@@ -1,8 +1,8 @@
 [
   {
     "gap": "Services not yet tested on many buildings",
-    "status": "Partly resolved. Run live on 15 Nov 2026 from a laptop: the CEP9 school and the A160 office were found, geocoded and read from Catastro, ICGC and LiDAR without errors. Catastro returned no building outline for 2 CEP9 members (Institut Maria Espinalt, Llevant fire station).",
-    "next": "Find out why those two have no outline (try their cadastral reference directly instead of the point), then run smoke_test.py on 10 more Poblenou buildings."
+    "status": "Partly resolved. Run live on 15 Nov 2026: the CEP9 school and the A160 office were found without errors. On 21 Nov 2026 every CEP9 member and A160 guest was geocoded and given a cadastral reference (step01_select_host/cases/). The 2 CEP9 members with no outline had been looked up at the school's point; at their real points Catastro finds the plots, but the INSPIRE Buildings service has no building for Maria Espinalt, the Llevant fire station or Institut ITAEB.",
+    "next": "Take those three outlines from the plot (parcels.py) or the ICGC building layer, then run smoke_test.py on 10 more Poblenou buildings."
   },
   {
     "gap": "Catastro address differs from the address you typed",
